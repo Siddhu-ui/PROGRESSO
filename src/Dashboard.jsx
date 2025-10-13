@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { useTheme } from "./ThemeContext";
 import Game from "./Game";
 import LevelRoadmap from "./LevelRoadmap";
 import Leaderboard from "./Leaderboard"; 
 
 function Dashboard({ user, setUser, token, setToken }) {
+  const { theme } = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [userStats, setUserStats] = useState({
@@ -62,18 +64,41 @@ function Dashboard({ user, setUser, token, setToken }) {
     { id: 'cleaning', name: 'Quick Tidy Up', xp: 10, icon: '🧹', color: '#64748b' },
   ];
 
-  // Add XP function using backend API
+  // Add XP function using backend API or localStorage fallback
   const addXP = async (taskId, xpToAdd) => {
     try {
-      // Call backend API to add XP
-      const response = await makeAuthenticatedRequest('/users/add-xp', { xp: xpToAdd }, 'POST');
-      const { level, xp, message } = response.data;
+      // Check if using offline mode
+      const currentToken = localStorage.getItem('token');
+      const isOffline = !currentToken || currentToken.startsWith('offline_');
 
-      // Update local state with backend response
+      let newLevel, newXp;
+
+      if (isOffline) {
+        // Offline mode - use localStorage
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentXp = storedUser.xp || 0;
+        const currentLevel = storedUser.level || 1;
+        
+        newXp = currentXp + xpToAdd;
+        newLevel = Math.floor(newXp / 100) + 1; // 100 XP per level
+        
+        // Update localStorage
+        storedUser.xp = newXp;
+        storedUser.level = newLevel;
+        storedUser.tasksCompleted = (storedUser.tasksCompleted || 0) + 1;
+        localStorage.setItem('user', JSON.stringify(storedUser));
+        
+        // Update user state
+        setUser(storedUser);
+      } else {
+        // Online mode - call backend API
+        const response = await makeAuthenticatedRequest('/users/add-xp', { xp: xpToAdd }, 'POST');
+        newLevel = response.data.level;
+        newXp = response.data.xp;
+      }
+
+      // Update local state
       setUserStats(prev => {
-        const newLevel = level;
-        const newXp = xp;
-
         // Show level up toast
         if (newLevel > prev.level) {
           setToast({ message: `Level Up! Reached Level ${newLevel}! ✨`, type: 'success' });
@@ -108,8 +133,37 @@ function Dashboard({ user, setUser, token, setToken }) {
 
     } catch (error) {
       console.error('Error adding XP:', error);
-      setToast({ message: 'Failed to add XP. Please try again.', type: 'error' });
-      setTimeout(() => setToast(null), 3000);
+      
+      // Fallback to localStorage if backend fails
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentXp = storedUser.xp || 0;
+        const currentLevel = storedUser.level || 1;
+        
+        const newXp = currentXp + xpToAdd;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        
+        storedUser.xp = newXp;
+        storedUser.level = newLevel;
+        storedUser.tasksCompleted = (storedUser.tasksCompleted || 0) + 1;
+        localStorage.setItem('user', JSON.stringify(storedUser));
+        setUser(storedUser);
+
+        setUserStats(prev => ({
+          ...prev,
+          xp: newXp,
+          level: newLevel,
+          tasksCompleted: prev.tasksCompleted + 1,
+        }));
+
+        setToast({ message: `+${xpToAdd} XP Gained! (Offline Mode)`, type: 'success' });
+        setTimeout(() => setToast(null), 3000);
+        
+        setTaskXP(prev => ({...prev, [taskId]: (prev[taskId] || 0) + 1}));
+      } catch (fallbackError) {
+        setToast({ message: 'Failed to add XP. Please try again.', type: 'error' });
+        setTimeout(() => setToast(null), 3000);
+      }
     }
   };
 
@@ -161,8 +215,8 @@ function Dashboard({ user, setUser, token, setToken }) {
       transition={{ duration: 0.8, ease: "easeOut" }}
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
-        color: "#f1f5f9",
+        background: theme.background,
+        color: theme.textPrimary,
         position: "relative",
         overflow: "hidden",
       }}
@@ -170,12 +224,12 @@ function Dashboard({ user, setUser, token, setToken }) {
       {/* Animated Background Elements */}
       <div style={{
         position: "absolute", top: "10%", left: "5%", width: "300px", height: "300px",
-        background: "radial-gradient(circle, rgba(96, 165, 250, 0.05) 0%, transparent 70%)",
+        background: `radial-gradient(circle, ${theme.accent}10 0%, transparent 70%)`,
         borderRadius: "50%", animation: "float 20s ease-in-out infinite",
       }} />
       <div style={{
         position: "absolute", top: "60%", right: "8%", width: "200px", height: "200px",
-        background: "radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, transparent 70%)",
+        background: `radial-gradient(circle, ${theme.accentSecondary}10 0%, transparent 70%)`,
         borderRadius: "50%", animation: "float 25s ease-in-out infinite reverse",
       }} />
 
@@ -186,8 +240,8 @@ function Dashboard({ user, setUser, token, setToken }) {
         transition={{ duration: 0.8, delay: 0.2 }}
         style={{
           position: "sticky", top: 0, zIndex: 100,
-          background: "rgba(15, 23, 42, 0.95)", backdropFilter: "blur(20px) saturate(180%)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)", padding: "20px 0",
+          background: theme.navBg, backdropFilter: "blur(20px) saturate(180%)",
+          borderBottom: `1px solid ${theme.border}`, padding: "20px 0",
         }}
       >
         <div style={{
@@ -211,8 +265,8 @@ function Dashboard({ user, setUser, token, setToken }) {
               onClick={() => setActiveSection(index)}
               style={{
                 padding: "12px 24px", borderRadius: "15px", border: "none",
-                background: activeSection === index ? `linear-gradient(135deg, ${section.color}, ${section.color}cc)` : "rgba(255, 255, 255, 0.08)",
-                color: activeSection === index ? "#fff" : "#94a3b8",
+                background: activeSection === index ? `linear-gradient(135deg, ${theme.accent}, ${theme.accentSecondary})` : theme.cardBg,
+                color: activeSection === index ? "#fff" : theme.textSecondary,
                 fontWeight: "600", fontSize: "0.9rem", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease",
                 boxShadow: activeSection === index ? `0 4px 15px ${section.color}40` : "none",
