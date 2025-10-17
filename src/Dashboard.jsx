@@ -6,6 +6,7 @@ import { useTheme } from "./ThemeContext";
 import Game from "./Game";
 import LevelRoadmap from "./LevelRoadmap";
 import Leaderboard from "./Leaderboard";
+import CalorieTracker from "./CalorieTracker";
 import UserProfile from "./UserProfile"; 
 
 function Dashboard({ user, setUser, token, setToken }) {
@@ -255,12 +256,21 @@ function Dashboard({ user, setUser, token, setToken }) {
             { title: 'AI Assistant', icon: '🤖', color: '#8b5cf6' },
             { title: 'Fun Challenges', icon: '🎮', color: '#ec4899' },
             { title: 'Leaderboard', icon: '🏆', color: '#f97316' },
+            { title: 'Calorie Tracker', icon: '🔥', color: '#ff6b6b' },
             { title: 'Profile', icon: '👤', color: '#06b6d4' },
           ].map((section, index) => (
             <motion.button
               key={section.title}
-              whileHover={{ scale: 1.05, boxShadow: `0 4px 15px ${section.color}40` }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: `0 8px 25px ${section.color}50`,
+                y: -2,
+                transition: { duration: 0.2, ease: "easeOut" }
+              }}
+              whileTap={{
+                scale: 0.95,
+                transition: { duration: 0.1 }
+              }}
               onClick={() => setActiveSection(index)}
               style={{
                 padding: "12px 24px", borderRadius: "15px", border: "none",
@@ -271,7 +281,20 @@ function Dashboard({ user, setUser, token, setToken }) {
                 boxShadow: activeSection === index ? `0 4px 15px ${section.color}40` : "none",
               }}
             >
-              <span style={{ fontSize: "1.2rem" }}>{section.icon}</span>
+              <motion.span
+                animate={{
+                  rotate: activeSection === index ? [0, 5, -5, 0] : 0,
+                  scale: activeSection === index ? [1, 1.1, 1] : 1
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: activeSection === index ? Infinity : 0,
+                  ease: "easeInOut"
+                }}
+                style={{ fontSize: "1.2rem" }}
+              >
+                {section.icon}
+              </motion.span>
               <span>{section.title}</span>
             </motion.button>
           ))}
@@ -299,14 +322,17 @@ function Dashboard({ user, setUser, token, setToken }) {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+            transition={{
+              x: { type: "spring", stiffness: 400, damping: 35, mass: 0.8 },
+              opacity: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
+            }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={1}
+            dragElastic={0.8}
             onDragEnd={(e, { offset, velocity }) => {
               const swipe = Math.abs(offset.x) * velocity.x;
-              if (swipe < -10000 && activeSection < 5) setActiveSection(activeSection + 1);
-              else if (swipe > 10000 && activeSection > 0) setActiveSection(activeSection - 1);
+              if (swipe < -8000 && activeSection < 6) setActiveSection(activeSection + 1);
+              else if (swipe > 8000 && activeSection > 0) setActiveSection(activeSection - 1);
             }}
             style={{
               width: "100%",
@@ -477,8 +503,14 @@ function Dashboard({ user, setUser, token, setToken }) {
                           key={task.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
-                          whileHover={{ scale: 1.02, y: -5 }}
+                          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          whileHover={{
+                            scale: 1.03,
+                            y: -8,
+                            rotate: [0, -1, 1, 0],
+                            transition: { duration: 0.3, ease: "easeOut" }
+                          }}
+                          whileTap={{ scale: 0.98 }}
                           style={{
                             background: `linear-gradient(135deg, ${task.color}08, ${task.color}05)`,
                             borderRadius: "20px",
@@ -507,11 +539,16 @@ function Dashboard({ user, setUser, token, setToken }) {
                           }} />
 
                           <motion.div
-                            whileHover={{ scale: 1.2, rotate: 10 }}
+                            whileHover={{
+                              scale: 1.25,
+                              rotate: [0, -5, 5, 0],
+                              transition: { duration: 0.4, ease: "easeInOut" }
+                            }}
                             style={{
                               fontSize: "2.5rem",
                               marginBottom: "15px",
-                              filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.2))"
+                              filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.2))",
+                              transformOrigin: "center"
                             }}
                           >
                             {task.icon}
@@ -633,7 +670,11 @@ function Dashboard({ user, setUser, token, setToken }) {
                         animate={{
                           width: `${Math.min((Object.values(taskXP).reduce((sum, count) => sum + count, 0) / xpTasks.length) * 100, 100)}%`
                         }}
-                        transition={{ duration: 1, ease: "easeOut" }}
+                        transition={{
+                          duration: 1.2,
+                          ease: [0.25, 0.46, 0.45, 0.94],
+                          delay: 0.3
+                        }}
                         style={{
                           height: "100%",
                           background: "linear-gradient(90deg, #f59e0b, #f97316, #ef4444)",
@@ -648,8 +689,9 @@ function Dashboard({ user, setUser, token, setToken }) {
                           x: ["-100%", "400%"]
                         }}
                         transition={{
-                          duration: 3,
+                          duration: 2.5,
                           repeat: Infinity,
+                          repeatDelay: 1,
                           ease: "easeInOut"
                         }}
                         style={{
@@ -859,6 +901,54 @@ function Dashboard({ user, setUser, token, setToken }) {
               )}
               {activeSection === 5 && (
                 <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  style={{
+                    width: "100%",
+                    maxWidth: "1400px",
+                    background: "linear-gradient(135deg, #ff6b6b15, #f9731615)",
+                    borderRadius: "25px",
+                    padding: "30px",
+                    border: "2px solid rgba(255, 107, 107, 0.3)",
+                    boxShadow: "0 20px 60px rgba(255, 107, 107, 0.1)"
+                  }}
+                >
+                  <motion.div
+                    animate={{ rotate: [0, 3, -3, 0], scale: [1, 1.02, 1] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    style={{ fontSize: "3.5rem", marginBottom: "20px", textAlign: "center" }}
+                  >
+                    🔥
+                  </motion.div>
+                  <motion.h2
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    style={{
+                      fontSize: "2.8rem",
+                      fontWeight: "900",
+                      background: "linear-gradient(135deg, #ff6b6b, #f97316, #22c55e)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      textAlign: "center",
+                      marginBottom: "30px",
+                      textShadow: "0 0 30px rgba(255, 107, 107, 0.3)"
+                    }}
+                  >
+                    Calorie Tracker Pro
+                  </motion.h2>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  >
+                    <CalorieTracker />
+                  </motion.div>
+                </motion.div>
+              )}
+              {activeSection === 6 && (
+                <motion.div
                   key="profile"
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -879,7 +969,7 @@ function Dashboard({ user, setUser, token, setToken }) {
           style={{ position: "fixed", left: "20px", top: "50%", transform: "translateY(-50%)", zIndex: 50, /* styles */ }}
         >←</motion.button>
       )}
-      {activeSection < 5 && (
+      {activeSection < 6 && (
         <motion.button
           onClick={() => setActiveSection(activeSection + 1)}
           style={{ position: "fixed", right: "20px", top: "50%", transform: "translateY(-50%)", zIndex: 50, /* styles */ }}
@@ -890,8 +980,19 @@ function Dashboard({ user, setUser, token, setToken }) {
       <AnimatePresence>
         {xpAnimations.map(anim => (
           <motion.div key={anim.id} initial={{ opacity: 1, scale: 0.3, x: anim.x - 30, y: anim.y - 30, color: "#f59e0b" }}
-            animate={{ opacity: 0, scale: 1.8, y: anim.y - 120, x: anim.x - 30 + (Math.random() - 0.5) * 60, transition: { duration: 2.5, ease: "easeOut" } }}
-            exit={{ opacity: 0, scale: 0.5 }}
+            animate={{
+              opacity: 0,
+              scale: 1.8,
+              y: anim.y - 120,
+              x: anim.x - 30 + (Math.random() - 0.5) * 60,
+              rotate: [0, 5, -5, 0],
+              transition: {
+                duration: 2.5,
+                ease: [0.25, 0.46, 0.45, 0.94],
+                opacity: { duration: 2, ease: "easeOut" }
+              }
+            }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.3 } }}
             style={{ position: "fixed", fontSize: "1.5rem", fontWeight: "900", pointerEvents: "none", zIndex: 1000 }}
           >+{anim.xp} XP</motion.div>
         ))}
@@ -899,13 +1000,33 @@ function Dashboard({ user, setUser, token, setToken }) {
 
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }}
+          <motion.div initial={{ opacity: 0, y: 100, scale: 0.8 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
+            }}
+            exit={{
+              opacity: 0,
+              y: 100,
+              scale: 0.8,
+              transition: { duration: 0.3, ease: "easeIn" }
+            }}
             style={{ position: "fixed", bottom: "30px", left: "50%", transform: "translateX(-50%)", padding: "16px 30px", borderRadius: "15px", zIndex: 1001,
                      background: toast.type === 'error' ? "linear-gradient(135deg, #ef4444, #dc2626)" : "linear-gradient(135deg, #10b981, #059669)",
                      color: "#fff", fontWeight: "600", boxShadow: "0 12px 40px rgba(0, 0, 0, 0.4)" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>{toast.type === 'error' ? '❌' : '✅'}</span>
+              <motion.span
+                animate={{
+                  rotate: toast.type === 'error' ? [0, 10, -10, 0] : [0, -5, 5, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+              >
+                {toast.type === 'error' ? '❌' : '✅'}
+              </motion.span>
               <span>{toast.message}</span>
             </div>
           </motion.div>
@@ -916,8 +1037,18 @@ function Dashboard({ user, setUser, token, setToken }) {
       <style>
         {`
           @keyframes float {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-30px) scale(1.05); }
+            0%, 100% {
+              transform: translateY(0px) translateX(0px) scale(1) rotate(0deg);
+            }
+            25% {
+              transform: translateY(-20px) translateX(10px) scale(1.05) rotate(2deg);
+            }
+            50% {
+              transform: translateY(-40px) translateX(-5px) scale(1.1) rotate(-1deg);
+            }
+            75% {
+              transform: translateY(-20px) translateX(15px) scale(1.05) rotate(1deg);
+            }
           }
           ::-webkit-scrollbar { width: 8px; }
           ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
