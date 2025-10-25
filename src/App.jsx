@@ -13,7 +13,7 @@ import AdventureMap from "./AdventureMap.jsx";
 import Game from "./Game";
 import AIAssistant from "./AIAssistant";
 import LevelRoadmap from "./LevelRoadmap";
-// Removed Firebase import - using JWT auth instead
+import { logout } from "./firebase";
 
 function AnimatedRoutes({ user, setUser, token, setToken }) {
   const location = useLocation();
@@ -293,6 +293,23 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  console.log('AppContent rendering, loading:', loading, 'user:', user);
+
+  // Fallback theme values in case theme context fails
+  const fallbackTheme = {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.1)',
+    textPrimary: '#ffffff',
+    textSecondary: '#e2e8f0',
+    accent: '#fbbf24',
+    accentSecondary: '#f59e0b',
+    border: 'rgba(255, 255, 255, 0.2)',
+    shadow: 'rgba(0, 0, 0, 0.2)',
+    navBg: 'rgba(102, 126, 234, 0.9)'
+  };
+
+  const currentTheme = theme || fallbackTheme;
+
   // Check for existing token on app load
   useEffect(() => {
     const existingToken = localStorage.getItem('token');
@@ -364,11 +381,13 @@ function AppContent() {
   }, [navigate]);
 
   // Logout function
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     setToken(null);
-    navigate('/welcome');
+    navigate('/auth');
   };
 
   if (loading) {
@@ -435,15 +454,15 @@ function AppContent() {
           style={{
             padding: "12px",
             borderRadius: "12px",
-            border: `1px solid ${theme.border}`,
-            background: theme.cardBg,
+            border: `1px solid ${currentTheme.border}`,
+            background: currentTheme.cardBg,
             backdropFilter: "blur(20px)",
-            color: theme.textPrimary,
+            color: currentTheme.textPrimary,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: `0 4px 15px ${theme.shadow}`,
+            boxShadow: `0 4px 15px ${currentTheme.shadow}`,
             transition: "all 0.3s ease",
           }}
           title="Theme Settings"
@@ -495,9 +514,9 @@ function AppContent() {
             marginBottom: "20px",
             marginTop: "60px",
             backdropFilter: "blur(20px) saturate(180%)",
-            background: theme.navBg,
+            background: currentTheme.navBg,
             borderRadius: "18px",
-            boxShadow: `0 8px 32px ${theme.shadow}`,
+            boxShadow: `0 8px 32px ${currentTheme.shadow}`,
           }}
         >
           {[
@@ -514,13 +533,13 @@ function AppContent() {
                 to={link.to}
                 style={{
                   fontWeight: 600,
-                  color: theme.textPrimary,
+                  color: currentTheme.textPrimary,
                   textDecoration: "none",
                   fontSize: "1rem",
                   transition: "color 0.3s ease",
                 }}
-                onMouseEnter={(e) => (e.target.style.color = theme.accent)}
-                onMouseLeave={(e) => (e.target.style.color = theme.textPrimary)}
+                onMouseEnter={(e) => (e.target.style.color = currentTheme.accent)}
+                onMouseLeave={(e) => (e.target.style.color = currentTheme.textPrimary)}
               >
                 {link.label}
               </Link>

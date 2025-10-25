@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, googleProvider } from "./firebaseConfig";
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "./firebase";
 import { useNavigate } from "react-router-dom";
 
 export default function LoginPage({ setUser, setToken }) {
@@ -21,9 +20,14 @@ export default function LoginPage({ setUser, setToken }) {
     try {
       let result;
       if (isSignUp) {
-        result = await createUserWithEmailAndPassword(auth, email, password);
+        result = await signUpWithEmail(email, password, email.split('@')[0]);
       } else {
-        result = await signInWithEmailAndPassword(auth, email, password);
+        result = await signInWithEmail(email, password);
+      }
+      
+      if (result.error) {
+        setError(result.error);
+        return;
       }
       
       const user = result.user;
@@ -44,7 +48,13 @@ export default function LoginPage({ setUser, setToken }) {
   const handleGoogleLogin = async () => {
     setError("");
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithGoogle();
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
       const user = result.user;
       const token = await user.getIdToken();
 

@@ -4,6 +4,8 @@ import {
   FaTrophy, FaSearch, FaMedal, FaCrown, FaStar, 
   FaFire, FaChartLine, FaCalendarAlt 
 } from "react-icons/fa";
+import { db } from "./firebase";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
 // XP Badge Thresholds with darker, more vibrant colors
 const XP_BADGES = [
@@ -53,27 +55,58 @@ function Leaderboard() {
   }, []);
 
   const getCurrentUser = () => {
-    // Get current user ID from localStorage or context
-    const token = localStorage.getItem('token');
-    if (token) {
+    // Get current user ID from localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUserId(payload.userId);
+        const userData = JSON.parse(storedUser);
+        setCurrentUserId(userData._id);
       } catch (error) {
-        console.error('Error parsing token:', error);
+        console.error('Error parsing user:', error);
       }
     }
   };
 
   const fetchLeaderboard = async () => {
     try {
-      // Skip backend fetch since no authentication is required
-      // Use mock data immediately for demo mode
-      console.log('📊 Loading demo leaderboard data...');
-      setLeaderboardData(getMockData());
+      console.log('📊 Fetching leaderboard from Firebase...');
+      
+      // Query Firestore for all users, ordered by XP
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, orderBy('xp', 'desc'), limit(50));
+      const querySnapshot = await getDocs(q);
+      
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        users.push({
+          _id: doc.id,
+          name: data.name || 'Anonymous',
+          email: data.email || '',
+          level: data.level || 1,
+          xp: data.xp || 0,
+          totalPoints: data.totalPoints || 0,
+          streak: data.streak || 0,
+        });
+      });
+      
+      // Add rank to each user
+      const rankedUsers = users.map((user, index) => ({
+        ...user,
+        rank: index + 1
+      }));
+      
+      console.log(`✅ Loaded ${rankedUsers.length} users from Firebase`);
+      setLeaderboardData(rankedUsers);
+      
+      // Fallback to mock data if no users found
+      if (rankedUsers.length === 0) {
+        console.log('⚠️ No users found, using mock data');
+        setLeaderboardData(getMockData());
+      }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      // Use mock data if backend fails
+      console.error('❌ Error fetching leaderboard:', error);
+      // Use mock data if Firebase fails
       setLeaderboardData(getMockData());
     } finally {
       setLoading(false);

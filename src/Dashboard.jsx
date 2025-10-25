@@ -11,6 +11,7 @@ import { NavBar } from "./components/ui/tubelight-navbar";
 import { GlowingEffectDemo } from "./components/GlowingEffectDemo";
 import { ShaderAnimation } from "./components/ui/shader-animation";
 import CalorieTracker from "./CalorieTracker";
+import TestXP from "./TestXP";
 
 import { Home, Gamepad2, Trophy, User, Palette, Flame } from "lucide-react";
 
@@ -952,6 +953,9 @@ function Dashboard({ user, setUser, token, setToken }) {
           style={{ position: "fixed", right: "20px", top: "50%", transform: "translateY(-50%)", zIndex: 50, /* styles */ }}
         >→</motion.button>
       )}
+
+      {/* Test XP Component (for testing only) */}
+      {user && <TestXP />}
 
       {/* Floating XP Animations & Toasts */}
       <AnimatePresence>

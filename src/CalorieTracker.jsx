@@ -353,4 +353,3 @@ const ChartPlaceholder = () => (
         <p className="text-slate-400 text-sm">Component is loading...</p>
     </div>
 );
-
