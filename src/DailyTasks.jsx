@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCheck, FaFire, FaStar, FaTrophy, FaChartLine } from 'react-icons/fa';
+import { FaCheck, FaFire, FaStar, FaTrophy, FaChartLine, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 const LEVELS = [
   { id: 1, name: "Novice", xpRequired: 1000, icon: "🌱", color: "#10b981" },
@@ -33,7 +35,7 @@ const DAILY_TASKS = [
   { id: 'coding', name: 'Coding Practice', xp: 25, icon: '💻', category: 'Learning' },
 ];
 
-function DailyTasks() {
+function DailyTasks({ user }) {
   const [completedTasks, setCompletedTasks] = useState([]);
   const [dailyXP, setDailyXP] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -42,72 +44,100 @@ function DailyTasks() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [lastCompletedDate, setLastCompletedDate] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [customTasks, setCustomTasks] = useState([]);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskXP, setNewTaskXP] = useState(10);
 
-  // Memoized calculations to prevent unnecessary re-renders
+  const allTasks = useMemo(() => [...DAILY_TASKS, ...customTasks], [customTasks]);
+
   const totalPossibleXP = useMemo(() => {
-    return DAILY_TASKS.reduce((sum, task) => sum + task.xp, 0);
-  }, []);
+    return allTasks.reduce((sum, task) => sum + task.xp, 0);
+  }, [allTasks]);
 
   const progressPercent = useMemo(() => {
     return totalPossibleXP > 0 ? (dailyXP / totalPossibleXP) * 100 : 0;
   }, [dailyXP, totalPossibleXP]);
 
   const completionRate = useMemo(() => {
-    return DAILY_TASKS.length > 0 ? (completedTasks.length / DAILY_TASKS.length) * 100 : 0;
-  }, [completedTasks.length]);
+    return allTasks.length > 0 ? (completedTasks.length / allTasks.length) * 100 : 0;
+  }, [completedTasks.length, allTasks]);
 
   const groupedTasks = useMemo(() => {
-    return DAILY_TASKS.reduce((acc, task) => {
+    return allTasks.reduce((acc, task) => {
       if (!acc[task.category]) acc[task.category] = [];
       acc[task.category].push(task);
       return acc;
     }, {});
-  }, []);
+  }, [allTasks]);
 
-  // Load data from localStorage on mount only
   useEffect(() => {
-    const savedTasks = localStorage.getItem('completedTasks');
-    const savedXP = localStorage.getItem('dailyXP');
-    const savedStreak = localStorage.getItem('streak');
-    const savedLevel = localStorage.getItem('userLevel');
-    const savedTotalXP = localStorage.getItem('totalXP');
-    const savedDate = localStorage.getItem('lastCompletedDate');
+    const loadUserData = async () => {
+      if (!user) {
+        setLoading(false);
+        setError('Please sign in to view tasks');
+        return;
+      }
 
-    const today = new Date().toDateString();
+      try {
+        setLoading(true);
+        setError(null);
 
-    if (savedDate === today) {
-      setCompletedTasks(savedTasks ? JSON.parse(savedTasks) : []);
-      setDailyXP(savedXP ? parseInt(savedXP) : 0);
-    } else {
-      // New day - reset daily tasks
-      setCompletedTasks([]);
-      setDailyXP(0);
-      localStorage.removeItem('completedTasks');
-      localStorage.removeItem('dailyXP');
-    }
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        const today = new Date().toDateString();
 
-    setStreak(savedStreak ? parseInt(savedStreak) : 0);
-    setUserLevel(savedLevel ? parseInt(savedLevel) : 1);
-    setTotalXP(savedTotalXP ? parseInt(savedTotalXP) : 0);
-    setLastCompletedDate(savedDate);
-  }, []);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const lastDate = userData.lastCompletedDate?.toDate?.()?.toDateString();
+          setCustomTasks(userData.customTasks || []);
 
-  // Save to localStorage when daily data changes
-  useEffect(() => {
-    const today = new Date().toDateString();
-    localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
-    localStorage.setItem('dailyXP', dailyXP.toString());
-    localStorage.setItem('lastCompletedDate', today);
-  }, [completedTasks, dailyXP]);
+          if (lastDate !== today) {
+            await updateDoc(userRef, {
+              completedTasks: [],
+              dailyXP: 0,
+              lastCompletedDate: today,
+              updatedAt: new Date()
+            });
 
-  // Save persistent data when it changes
-  useEffect(() => {
-    localStorage.setItem('streak', streak.toString());
-    localStorage.setItem('userLevel', userLevel.toString());
-    localStorage.setItem('totalXP', totalXP.toString());
-  }, [streak, userLevel, totalXP]);
+            setCompletedTasks([]);
+            setDailyXP(0);
+          } else {
+            setCompletedTasks(userData.completedTasks || []);
+            setDailyXP(userData.dailyXP || 0);
+          }
 
-  // Memoized level calculation functions
+          setTotalXP(userData.totalXP || 0);
+          setUserLevel(userData.level || 1);
+          setStreak(userData.streak || 0);
+          setLastCompletedDate(lastDate || today);
+        } else {
+          await setDoc(userRef, {
+            completedTasks: [],
+            dailyXP: 0,
+            totalXP: 0,
+            level: 1,
+            streak: 0,
+            lastCompletedDate: today,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            name: user.displayName || user.email.split('@')[0],
+            email: user.email
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        setError('Failed to load your data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [user, retryCount]);
+
   const getCurrentLevelInfo = useCallback(() => {
     return LEVELS.find(l => l.id === userLevel) || LEVELS[0];
   }, [userLevel]);
@@ -133,50 +163,161 @@ function DailyTasks() {
     return Math.min((xpInCurrentLevel / xpNeededForNextLevel) * 100, 100);
   }, [totalXP, getCurrentLevelInfo, getNextLevelInfo]);
 
-  // Optimized task completion handler
-  const handleTaskComplete = useCallback((task) => {
-    const isCompleted = completedTasks.includes(task.id);
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!newTaskName.trim() || !user) return;
 
-    if (isCompleted) {
-      // Uncomplete task
-      setCompletedTasks(prev => prev.filter(id => id !== task.id));
-      setDailyXP(prev => prev - task.xp);
-      setTotalXP(prev => prev - task.xp);
-    } else {
-      // Complete task
-      const newDailyXP = dailyXP + task.xp;
-      const newTotalXP = totalXP + task.xp;
-      const newLevel = calculateLevel(newTotalXP);
+    const newTask = {
+      id: `custom_${Date.now()}`,
+      name: newTaskName.trim(),
+      xp: Math.min(100, Math.max(1, parseInt(newTaskXP, 10) || 10)),
+      icon: '📝',
+      category: 'Custom',
+    };
 
-      setCompletedTasks(prev => [...prev, task.id]);
-      setDailyXP(newDailyXP);
-      setTotalXP(newTotalXP);
-      setUserLevel(newLevel);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        customTasks: arrayUnion(newTask),
+      });
 
-      // Show celebration
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 1500);
-
-      // Show level up if leveled up
-      if (newLevel > userLevel) {
-        setShowLevelUp(true);
-        setTimeout(() => setShowLevelUp(false), 2500);
-      }
-
-      // Update streak
-      const today = new Date().toDateString();
-      const yesterday = new Date(Date.now() - 86400000).toDateString();
-
-      if (lastCompletedDate === yesterday) {
-        setStreak(prev => prev + 1);
-      } else if (lastCompletedDate !== today) {
-        setStreak(1);
-      }
+      setCustomTasks(prev => [...prev, newTask]);
+      setNewTaskName('');
+      setNewTaskXP(10);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      setError('Failed to add task. Please try again.');
     }
-  }, [completedTasks, dailyXP, totalXP, userLevel, lastCompletedDate, calculateLevel]);
+  };
+
+  const handleTaskComplete = useCallback(async (task) => {
+    if (!user) {
+      setError('Please sign in to complete tasks');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const isCompleted = completedTasks.includes(task.id);
+      const today = new Date().toDateString();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toDateString();
+
+      if (isCompleted) {
+        const newDailyXP = Math.max(0, dailyXP - task.xp);
+        const newTotalXP = Math.max(0, totalXP - task.xp);
+        const newLevel = calculateLevel(newTotalXP);
+
+        await updateDoc(userRef, {
+          completedTasks: arrayRemove(task.id),
+          dailyXP: newDailyXP,
+          totalXP: newTotalXP,
+          level: newLevel,
+          updatedAt: new Date(),
+        });
+
+        setCompletedTasks(prev => prev.filter(id => id !== task.id));
+        setDailyXP(newDailyXP);
+        setTotalXP(newTotalXP);
+        setUserLevel(newLevel);
+      } else {
+        const newDailyXP = dailyXP + task.xp;
+        const newTotalXP = totalXP + task.xp;
+        const newLevel = calculateLevel(newTotalXP);
+        let newStreak = streak;
+
+        if (lastCompletedDate === yesterdayStr) {
+          newStreak = (streak || 0) + 1;
+        } else if (lastCompletedDate !== today) {
+          newStreak = 1;
+        }
+
+        const updateData = {
+          completedTasks: arrayUnion(task.id),
+          dailyXP: newDailyXP,
+          totalXP: newTotalXP,
+          level: newLevel,
+          lastCompletedDate: today,
+          updatedAt: new Date(),
+        };
+
+        if (newStreak !== streak) {
+          updateData.streak = newStreak;
+        }
+
+        await updateDoc(userRef, updateData);
+
+        setCompletedTasks(prev => [...prev, task.id]);
+        setDailyXP(newDailyXP);
+        setTotalXP(newTotalXP);
+        setUserLevel(newLevel);
+        setStreak(newStreak);
+        setLastCompletedDate(today);
+
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 1500);
+
+        if (newLevel > userLevel) {
+          setShowLevelUp(true);
+          setTimeout(() => setShowLevelUp(false), 2500);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      setError('Failed to update task. Please try again.');
+    }
+  }, [user, completedTasks, dailyXP, totalXP, userLevel, lastCompletedDate, streak, calculateLevel]);
+
+  if (loading) {
+    return (
+      <div style={styles.loadingContainer}>
+        <FaSpinner className="animate-spin" size={40} color="#8b5cf6" />
+        <p style={{ marginTop: '20px', color: '#fff' }}>Loading your tasks...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.errorContainer}>
+        <FaExclamationTriangle size={50} color="#ef4444" />
+        <h2 style={{ color: '#fff', margin: '20px 0' }}>Something went wrong</h2>
+        <p style={{ color: '#9ca3af', marginBottom: '30px' }}>{error}</p>
+        <button
+          onClick={() => setRetryCount(prev => prev + 1)}
+          style={styles.retryButton}
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          style={{
+            background: '#ef4444',
+            color: 'white',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            maxWidth: '800px',
+            margin: '0 auto 20px'
+          }}
+        >
+          <FaExclamationTriangle size={20} />
+          <span>{error}</span>
+        </motion.div>
+      )}
       {/* Celebration Animation */}
       <AnimatePresence>
         {showCelebration && (
@@ -203,6 +344,27 @@ function DailyTasks() {
         </h1>
         <p style={styles.subtitle}>Complete tasks to earn XP and level up!</p>
       </motion.div>
+
+      {/* Progress Bar Section */}
+      <div style={styles.progressSection}>
+        <div style={styles.progressHeader}>
+          <span style={styles.progressLabel}>Daily Progress</span>
+          <span style={styles.progressValue}>
+            {dailyXP}/{totalPossibleXP} XP ({Math.round(progressPercent)}%)
+          </span>
+        </div>
+        <div style={styles.progressBarBg}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: 0.8 }}
+            style={{
+              ...styles.progressBarFill,
+              background: `linear-gradient(90deg, ${getCurrentLevelInfo().color}, ${getNextLevelInfo().color})`,
+            }}
+          />
+        </div>
+      </div>
 
       {/* Stats Cards */}
       <div style={styles.statsGrid}>
@@ -286,6 +448,28 @@ function DailyTasks() {
         </div>
       </div>
 
+      {/* Add Task Form */}
+      <form onSubmit={handleAddTask} style={styles.addTaskForm}>
+        <input
+          type="text"
+          value={newTaskName}
+          onChange={(e) => setNewTaskName(e.target.value)}
+          placeholder="Add a new daily task..."
+          style={styles.taskInput}
+          required
+        />
+        <input
+          type="number"
+          value={newTaskXP}
+          onChange={(e) => setNewTaskXP(e.target.value)}
+          min="1"
+          max="100"
+          style={styles.xpInput}
+          title="XP (1-100)"
+        />
+        <button type="submit" style={styles.addButton}>Add</button>
+      </form>
+
       {/* Level Up Animation */}
       <AnimatePresence>
         {showLevelUp && (
@@ -362,6 +546,39 @@ function DailyTasks() {
 }
 
 const styles = {
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+  },
+  errorContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    padding: '20px',
+    textAlign: 'center',
+    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+  },
+  retryButton: {
+    background: '#8b5cf6',
+    color: 'white',
+    border: 'none',
+    padding: '12px 24px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '1rem',
+    transition: 'all 0.2s',
+    '&:hover': {
+      background: '#7c3aed',
+      transform: 'translateY(-2px)'
+    }
+  },
   container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
@@ -434,11 +651,42 @@ const styles = {
   },
   progressSection: {
     maxWidth: '1200px',
-    margin: '0 auto 40px',
+    margin: '0 auto 20px',
     background: 'rgba(255,255,255,0.05)',
-    padding: '25px',
-    borderRadius: '15px',
+    padding: '20px',
+    borderRadius: '12px',
     backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+  },
+  progressHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  progressLabel: {
+    fontSize: '1.1rem',
+    fontWeight: '600',
+    color: '#e2e8f0',
+  },
+  progressValue: {
+    fontSize: '1.1rem',
+    fontWeight: '700',
+    color: '#a78bfa',
+  },
+  progressBarBg: {
+    width: '100%',
+    height: '12px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '6px',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: '6px',
+    transition: 'width 0.3s ease-out',
+    boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)',
   },
   progressHeader: {
     display: 'flex',
@@ -583,20 +831,44 @@ const styles = {
     gap: '15px',
   },
   taskCard: {
-    background: 'rgba(255,255,255,0.08)',
-    padding: '20px',
-    borderRadius: '15px',
+    background: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: '12px',
+    padding: '18px 20px',
     display: 'flex',
     alignItems: 'center',
-    gap: '15px',
     cursor: 'pointer',
-    border: '2px solid transparent',
     transition: 'all 0.3s ease',
-    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    position: 'relative',
+    overflow: 'hidden',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderColor: 'rgba(255, 255, 255, 0.15)'
+    },
+    '&:active': {
+      transform: 'translateY(0)'
+    }
   },
   taskCardCompleted: {
-    background: 'rgba(16, 185, 129, 0.2)',
-    border: '2px solid #10b981',
+    opacity: 0.6,
+    '&:after': {
+      content: '""',
+      position: 'absolute',
+      top: '50%',
+      left: '15px',
+      right: '15px',
+      height: '2px',
+      background: 'rgba(255, 255, 255, 0.5)',
+      transform: 'scaleX(0.9)'
+    },
+    '&:hover': {
+      opacity: 0.8,
+      transform: 'none',
+      boxShadow: 'none',
+      background: 'rgba(255, 255, 255, 0.03)'
+    }
   },
   taskIcon: {
     fontSize: '2.5rem',
@@ -616,18 +888,65 @@ const styles = {
     margin: 0,
   },
   checkbox: {
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    border: '2px solid #555',
+    width: '24px',
+    height: '24px',
+    borderRadius: '8px',
+    border: '2px solid rgba(255, 255, 255, 0.2)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'all 0.3s ease',
+    marginLeft: 'auto',
+    flexShrink: 0,
+    transition: 'all 0.2s ease',
+    background: 'rgba(0, 0, 0, 0.2)',
+    '&:hover': {
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+      transform: 'scale(1.05)'
+    }
   },
   checkboxCompleted: {
-    background: '#10b981',
-    border: '2px solid #10b981',
+    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+    borderColor: 'transparent',
+    boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
+    '&:hover': {
+      transform: 'scale(1.05)',
+      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.6)'
+    }
+  },
+  addTaskForm: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '30px',
+    maxWidth: '800px',
+    margin: '0 auto 30px',
+  },
+  taskInput: {
+    flex: 1,
+    padding: '12px 15px',
+    borderRadius: '8px',
+    border: '1px solid #4b5563',
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: 'white',
+    fontSize: '1rem',
+  },
+  xpInput: {
+    width: '80px',
+    padding: '12px',
+    borderRadius: '8px',
+    border: '1px solid #4b5563',
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: 'white',
+    textAlign: 'center',
+  },
+  addButton: {
+    padding: '12px 20px',
+    background: '#8b5cf6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    transition: 'all 0.2s',
   },
   completionMessage: {
     maxWidth: '600px',

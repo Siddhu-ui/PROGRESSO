@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from "./ThemeContext";
 import ThemeCustomizer from "./ThemeCustomizer";
 import Welcome from "./Welcome";
 import Auth from "./Auth";
+import LoginPage from "./LoginPage";
 import Dashboard from "./Dashboard";
 import Profile from "./ProfilePage";
 import Leaderboard from "./Leaderboard";
@@ -13,7 +14,7 @@ import AdventureMap from "./AdventureMap.jsx";
 import Game from "./Game";
 import AIAssistant from "./AIAssistant";
 import LevelRoadmap from "./LevelRoadmap";
-import { logout } from "./firebase";
+import { onAuthStateChange } from './firebase';
 
 function AnimatedRoutes({ user, setUser, token, setToken }) {
   const location = useLocation();
@@ -103,7 +104,7 @@ function AnimatedRoutes({ user, setUser, token, setToken }) {
               animate="in"
               exit="out"
             >
-              <Auth setUser={setUser} setToken={setToken} />
+              <LoginPage setUser={setUser} setToken={setToken} />
             </motion.div>
           }
         />
@@ -310,84 +311,49 @@ function AppContent() {
 
   const currentTheme = theme || fallbackTheme;
 
-  // Check for existing token on app load
+  // Listen for Firebase auth state changes
   useEffect(() => {
-    const existingToken = localStorage.getItem('token');
-    if (existingToken) {
-      // Check if offline token
-      if (existingToken.startsWith('offline_')) {
-        // Use localStorage user data
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-            setToken(existingToken);
-            setLoading(false);
-          } catch (err) {
-            console.error('Error parsing stored user:', err);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setLoading(false);
-            navigate('/auth');
-          }
-        } else {
-          localStorage.removeItem('token');
-          setLoading(false);
-          navigate('/auth');
-        }
-      } else {
-        // Verify token with backend
-        fetch('http://localhost:5000/api/auth/verify', {
-          headers: { Authorization: `Bearer ${existingToken}` }
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.valid) {
-            setUser(data.user);
-            setToken(existingToken);
-          } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/auth');
-          }
-        })
-        .catch(() => {
-          // Backend unavailable, try offline mode
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            try {
-              const userData = JSON.parse(storedUser);
-              setUser(userData);
-              setToken(existingToken);
-            } catch (err) {
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-              navigate('/auth');
-            }
-          } else {
-            localStorage.removeItem('token');
-            navigate('/auth');
-          }
-        })
-        .finally(() => {
-          setLoading(false);
+    const unsubscribe = onAuthStateChange((user) => {
+      if (user) {
+        // User is signed in
+        setUser(user);
+        user.getIdToken().then(token => {
+          setToken(token);
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
         });
+      } else {
+        // User is signed out
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/auth');
       }
-    } else {
       setLoading(false);
-      navigate('/auth');
-    }
-  }, [navigate]);
+    });
+
+    return () => unsubscribe();
+  }, []); // Empty dependency array since onAuthStateChange handles everything
 
   // Logout function
   const handleLogout = async () => {
-    await logout();
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setToken(null);
-    navigate('/auth');
+    try {
+      // Clear local state first
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setToken(null);
+
+      // Then logout from Firebase
+      await logout();
+
+      // Navigation will be handled automatically by onAuthStateChange listener
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Fallback navigation in case auth state listener doesn't trigger
+      navigate('/auth');
+    }
   };
 
   if (loading) {

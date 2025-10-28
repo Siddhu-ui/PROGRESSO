@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTrophy, FaSearch, FaMedal, FaCrown, FaStar,
-  FaFire, FaChartLine, FaCalendarAlt, FaExclamationTriangle, FaRedo
+  FaFire, FaChartLine, FaCalendarAlt, FaExclamationTriangle, FaRedo, FaSpinner
 } from "react-icons/fa";
+import { collection, query, orderBy, limit, getDocs, onSnapshot } from "firebase/firestore";
+import { db } from "./firebase";
 
 // XP Requirements for each level (cumulative)
 const LEVEL_XP_REQUIREMENTS = {
@@ -91,152 +93,80 @@ function Leaderboard({ user }) {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [retrying, setRetrying] = useState(false);
   const [timeFilter, setTimeFilter] = useState("all"); // all, weekly, monthly
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(user?.uid || null);
   const [userStats, setUserStats] = useState(null);
 
+  // Fetch leaderboard data from Firestore
   useEffect(() => {
-    if (user && user._id) {
-      setCurrentUserId(user._id);
-      initializeUserInLeaderboard(user);
-
-      // Load leaderboard data from localStorage
-      loadLeaderboardData().catch(() => {
-        console.log('Loading mock data as fallback...');
-        loadMockData();
-      });
+    if (!user) {
+      setError('Please sign in to view the leaderboard');
+      setLoading(false);
+      return;
     }
-  }, [user, timeFilter]); // Re-run when timeFilter or user changes
 
-  const initializeUserInLeaderboard = (userData) => {
-    if (!userData?._id) return;
+    setCurrentUserId(user.uid);
+    setLoading(true);
+    setError(null);
 
-    // Load existing users from localStorage
-    const storedUsers = JSON.parse(localStorage.getItem('offline_users') || '[]');
+    // Create a query against the collection
+    const leaderboardQuery = query(
+      collection(db, 'users'),
+      orderBy('xp', 'desc'),
+      limit(100)
+    );
 
-    // Check if user already exists
-    const existingUserIndex = storedUsers.findIndex(u => u.id === userData._id);
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(leaderboardQuery, 
+      (querySnapshot) => {
+        const users = [];
+        querySnapshot.forEach((doc) => {
+          const userData = doc.data();
+          users.push({
+            id: doc.id,
+            ...userData,
+            user_id: doc.id,
+            username: userData.name || userData.email.split('@')[0],
+            last_updated: userData.updatedAt?.toDate()?.toISOString() || new Date().toISOString(),
+            // Ensure all required fields have default values
+            level: userData.level || 1,
+            xp: userData.xp || 0,
+            streak: userData.streak || 0,
+            tasksCompleted: userData.tasksCompleted || 0,
+          });
+        });
 
-    if (existingUserIndex === -1) {
-      // Add new user with default values
-      const newUser = {
-        id: userData._id,
-        email: userData.email,
-        name: userData.name,
-        level: 1, // Start at level 1
-        xp: 0,    // Start with 0 XP
-        streak: 0,
-        tasksCompleted: 0,
-        createdAt: new Date().toISOString()
-      };
-
-      storedUsers.push(newUser);
-      localStorage.setItem('offline_users', JSON.stringify(storedUsers));
-    } else {
-      // Update existing user data if needed
-      storedUsers[existingUserIndex] = {
-        ...storedUsers[existingUserIndex],
-        email: userData.email,
-        name: userData.name,
-        level: userData.level || storedUsers[existingUserIndex].level,
-        xp: userData.xp || storedUsers[existingUserIndex].xp,
-        streak: userData.streak || storedUsers[existingUserIndex].streak,
-        tasksCompleted: userData.tasksCompleted || storedUsers[existingUserIndex].tasksCompleted,
-      };
-      localStorage.setItem('offline_users', JSON.stringify(storedUsers));
-    }
-  };
-
-  const loadLeaderboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Load users from localStorage
-      const storedUsers = JSON.parse(localStorage.getItem('offline_users') || '[]');
-
-      if (storedUsers.length === 0) {
-        setError('No users found. Please register or log in to see the leaderboard.');
-        return;
-      }
-
-      // Sort by XP descending and add rank
-      const rankedData = storedUsers
-        .sort((a, b) => b.xp - a.xp)
-        .map((user, index) => ({
+        // Add ranks
+        const rankedData = users.map((user, index) => ({
           ...user,
-          rank: index + 1,
-          user_id: user.id,
-          username: user.name,
-          last_updated: user.createdAt // Use createdAt as last_updated
+          rank: index + 1
         }));
 
-      setLeaderboardData(rankedData);
-
-      // Update current user's stats for display
-      if (currentUserId) {
-        const currentUserData = rankedData.find(u => u.user_id === currentUserId);
+        setLeaderboardData(rankedData);
+        
+        // Set current user's stats
+        const currentUserData = rankedData.find(u => u.id === user.uid);
         if (currentUserData) {
           setUserStats(currentUserData);
         }
-      }
 
-    } catch (error) {
-      console.error('Error loading leaderboard data:', error);
-      setError('Failed to load leaderboard data');
-    } finally {
-      setLoading(false);
-      setRetrying(false);
-    }
-  }, [currentUserId, timeFilter]);
-
-  // Fallback function for when localStorage is empty
-  const loadMockData = useCallback(() => {
-    const mockData = [
-      {
-        id: '1',
-        user_id: 'demo-1',
-        username: 'Demo User 1',
-        email: 'demo1@example.com',
-        xp: 1500,
-        level: 3,
-        rank: 1,
-        last_updated: new Date().toISOString()
+        setLoading(false);
       },
-      {
-        id: '2',
-        user_id: 'demo-2',
-        username: 'Demo User 2',
-        email: 'demo2@example.com',
-        xp: 1200,
-        level: 2,
-        rank: 2,
-        last_updated: new Date().toISOString()
-      },
-      {
-        id: '3',
-        user_id: 'demo-3',
-        username: 'Demo User 3',
-        email: 'demo3@example.com',
-        xp: 800,
-        level: 1,
-        rank: 3,
-        last_updated: new Date().toISOString()
+      (error) => {
+        console.error('Error getting leaderboard data:', error);
+        setError('Failed to load leaderboard data. Please try again.');
+        setLoading(false);
       }
-    ];
+    );
 
-    setLeaderboardData(mockData);
-    setError('Using demo data - No users found in localStorage');
-  }, []);
+    // Clean up the listener on unmount
+    return () => unsubscribe();
+  }, [user, timeFilter]);
 
+  // Retry loading leaderboard data
   const retryLoad = () => {
-    setRetrying(true);
     setError(null);
-    loadLeaderboardData().catch(() => {
-      console.log('Real data failed, loading mock data...');
-      loadMockData();
-    });
+    setLoading(true);
   };
 
   const getBadge = (xp) => {
@@ -248,20 +178,11 @@ function Leaderboard({ user }) {
     user.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading && !retrying) {
+  if (loading) {
     return (
       <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
+        <FaSpinner className="animate-spin" size={32} color="#8b5cf6" />
         <p>Loading leaderboard...</p>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={retryLoad}
-          style={styles.retryButton}
-        >
-          <FaRedo size={14} />
-          Retry if stuck
-        </motion.button>
       </div>
     );
   }
@@ -272,15 +193,19 @@ function Leaderboard({ user }) {
         <FaExclamationTriangle size={50} color="#ef4444" />
         <h3 style={styles.errorTitle}>Leaderboard Issue</h3>
         <p style={styles.errorText}>{error}</p>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={retryLoad}
-          style={styles.retryButton}
-        >
-          <FaRedo size={14} />
-          Try Again
-        </motion.button>
+        {user ? (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={retryLoad}
+            style={styles.retryButton}
+          >
+            <FaRedo size={14} />
+            Try Again
+          </motion.button>
+        ) : (
+          <p>Please sign in to view the leaderboard</p>
+        )}
       </div>
     );
   }

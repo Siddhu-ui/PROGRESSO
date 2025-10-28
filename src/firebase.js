@@ -7,7 +7,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // ============================================
@@ -55,6 +55,10 @@ googleProvider.setCustomParameters({
 });
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
+
+// Debug: Log Firebase auth configuration
+console.log('🔧 Firebase Auth initialized:', auth);
+console.log('🔧 Google Provider configured:', googleProvider);
 
 // ============================================
 // AUTHENTICATION FUNCTIONS
@@ -128,24 +132,50 @@ export const signUpWithEmail = async (email, password, displayName) => {
  */
 export const signInWithEmail = async (email, password) => {
   try {
-    console.log('🔐 Signing in...');
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('✅ Sign in successful');
-    return { user: userCredential.user, error: null };
-  } catch (error) {
-    console.error('❌ Sign in failed:', error);
-    let errorMessage = 'Sign in failed. Please try again.';
+    const user = userCredential.user;
     
-    if (error.code === 'auth/user-not-found') {
-      errorMessage = 'No account found with this email address.';
-    } else if (error.code === 'auth/wrong-password') {
-      errorMessage = 'Incorrect password.';
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Please enter a valid email address.';
+    // Create or update user document in Firestore
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+    
+    const userData = {
+      email: user.email,
+      lastLogin: new Date(),
+      updatedAt: new Date()
+    };
+    
+    if (userDoc.exists()) {
+      // Update existing user
+      await updateDoc(userRef, userData);
+    } else {
+      // Create new user with default values
+      await setDoc(userRef, {
+        ...userData,
+        name: email.split('@')[0],
+        level: 1,
+        xp: 0,
+        totalPoints: 0,
+        streak: 0,
+        tasksCompleted: 0,
+        skillsUnlocked: 0,
+        mindfulMinutes: 0,
+        badges: [],
+        createdAt: new Date()
+      });
+    }
+    
+    return { user: user, error: null };
+  } catch (error) {
+    console.error('Sign in error:', error);
+    let errorMessage = 'Failed to sign in. Please check your email and password.';
+    
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      errorMessage = 'Invalid email or password.';
     } else if (error.code === 'auth/too-many-requests') {
       errorMessage = 'Too many failed attempts. Please try again later.';
-    } else if (error.code === 'auth/network-request-failed') {
-      errorMessage = 'Network error. Please check your connection.';
+    } else if (error.code === 'auth/user-disabled') {
+      errorMessage = 'This account has been disabled.';
     }
     
     return { user: null, error: errorMessage };
@@ -159,17 +189,33 @@ export const signInWithEmail = async (email, password) => {
 export const signInWithGoogle = async () => {
   try {
     console.log('🔄 Starting Google sign-in...');
+    
+    if (!googleProvider) {
+      throw new Error('Google authentication not configured');
+    }
+    if (!auth) {
+      throw new Error('Firebase Auth not initialized');
+    }
+
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     
-    // Check if user document exists, create if not
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    // Create or update user document in Firestore
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+    
+    const userData = {
+      name: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      lastLogin: new Date(),
+      updatedAt: new Date()
+    };
+    
     if (!userDoc.exists()) {
-      console.log('📝 Creating new user profile...');
-      await setDoc(doc(db, 'users', user.uid), {
-        name: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
+      // New user - set initial values
+      await setDoc(userRef, {
+        ...userData,
         level: 1,
         xp: 0,
         totalPoints: 0,
@@ -178,25 +224,34 @@ export const signInWithGoogle = async () => {
         skillsUnlocked: 0,
         mindfulMinutes: 0,
         badges: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date()
       });
+    } else {
+      // Existing user - update last login and any missing fields
+      await updateDoc(userRef, userData);
     }
-    
-    console.log('✅ Google sign-in successful');
+
     return { user: user, error: null };
   } catch (error) {
     console.error('❌ Google sign-in failed:', error);
     let errorMessage = 'Google sign in failed. Please try again.';
-    
+
     if (error.code === 'auth/popup-closed-by-user') {
       errorMessage = 'Sign in cancelled. Please try again.';
     } else if (error.code === 'auth/popup-blocked') {
       errorMessage = 'Popup blocked by browser. Please allow popups for this site.';
     } else if (error.code === 'auth/operation-not-allowed') {
-      errorMessage = 'Google sign-in is not enabled. Please contact support.';
+      errorMessage = 'Google sign-in is not enabled. Please check Firebase Console settings.';
+    } else if (error.code === 'auth/configuration-not-found') {
+      errorMessage = 'Google authentication not configured in Firebase project.';
+    } else if (error.code === 'auth/unauthorized-domain') {
+      errorMessage = 'Domain not authorized for Google sign-in. Check Firebase Console.';
+    } else if (error.code === 'auth/cancelled-popup-request') {
+      errorMessage = 'Another sign-in popup is already open. Please close it and try again.';
+    } else if (error.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error. Please check your connection and try again.';
     }
-    
+
     return { user: null, error: errorMessage };
   }
 };
@@ -399,6 +454,37 @@ export const getQuoteOfTheDay = async () => {
     };
   }
 };
+
+// ============================================
+// DEBUGGING FUNCTIONS
+// ============================================
+
+/**
+ * Debug Firebase configuration
+ * Call this in browser console to check Firebase setup
+ */
+export const debugFirebaseConfig = () => {
+  console.log('🔍 Firebase Debug Information:');
+  console.log('App:', app);
+  console.log('Auth:', auth);
+  console.log('Auth current user:', auth?.currentUser);
+  console.log('DB:', db);
+  console.log('Google Provider:', googleProvider);
+  console.log('Firebase Config:', firebaseConfig);
+
+  return {
+    app: !!app,
+    auth: !!auth,
+    db: !!db,
+    googleProvider: !!googleProvider,
+    currentUser: auth?.currentUser
+  };
+};
+
+// Make debug function available globally for console access
+if (typeof window !== 'undefined') {
+  window.debugFirebaseConfig = debugFirebaseConfig;
+}
 
 // Export the app instance as default
 export default app;

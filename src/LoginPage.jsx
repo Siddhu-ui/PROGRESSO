@@ -16,7 +16,7 @@ export default function LoginPage({ setUser, setToken }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    
+
     try {
       let result;
       if (isSignUp) {
@@ -24,47 +24,39 @@ export default function LoginPage({ setUser, setToken }) {
       } else {
         result = await signInWithEmail(email, password);
       }
-      
+
       if (result.error) {
         setError(result.error);
         return;
       }
-      
-      const user = result.user;
-      const token = await user.getIdToken();
 
-      localStorage.setItem("token", token);
-      setUser(user);
-      setToken(token);
+      // Success - redirect to dashboard
       navigate("/");
     } catch (err) {
-      console.error("Login failed", err);
-      setError(err.message || "Login failed. Please try again.");
+      setError("Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
     setError("");
+
     try {
       const result = await signInWithGoogle();
-      
+
       if (result.error) {
         setError(result.error);
         return;
       }
-      
-      const user = result.user;
-      const token = await user.getIdToken();
 
-      localStorage.setItem("token", token);
-      setUser(user);
-      setToken(token);
+      // Success - redirect to dashboard
       navigate("/");
     } catch (err) {
-      console.error("Google login failed", err);
-      setError(err.message || "Google login failed. Please try again.");
+      setError("Google login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -197,7 +189,8 @@ export default function LoginPage({ setUser, setToken }) {
             color: "#333",
             fontSize: "1rem",
             fontWeight: "600",
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
