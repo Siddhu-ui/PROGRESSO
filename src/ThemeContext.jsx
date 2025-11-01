@@ -26,7 +26,7 @@ const themes = {
   },
   dark: {
     name: 'Dark',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+    background: 'linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)',
     cardBg: 'rgba(255, 255, 255, 0.05)',
     textPrimary: '#f1f5f9',
     textSecondary: '#94a3b8',

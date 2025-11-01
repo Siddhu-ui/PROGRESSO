@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTrophy, FaFire, FaStar, FaGamepad, FaBolt, FaMedal } from 'react-icons/fa';
+import { useTheme } from './ThemeContext';
 
 function Game() {
+  const { theme } = useTheme();
+  const currentTheme = theme || {};
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [gameActive, setGameActive] = useState(false);
@@ -170,8 +173,14 @@ function Game() {
     }, 800);
   };
 
+  const containerStyle = {
+    ...styles.container,
+    background: currentTheme.background || styles.container.background,
+    color: currentTheme.textPrimary || styles.container.color,
+  };
+
   return (
-    <div style={styles.container}>
+    <div style={containerStyle}>
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>

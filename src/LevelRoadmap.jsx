@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTrophy, FaStar, FaCrown, FaFire, FaBolt, FaGem, FaInfoCircle, FaLock, FaCheck, FaMedal } from 'react-icons/fa';
 // import { getUserProfile, updateUserProfile } from './firebase'; // No longer needed
 import axios from 'axios'; // For backend API calls
+import { useTheme } from './ThemeContext';
 
 // Enhanced level data (unchanged)
 const LEVELS = [
@@ -25,6 +26,14 @@ const LEVELS = [
 
 // MODIFIED: Props now take level and xp directly from your Dashboard state
 function LevelRoadmap({ level, xp }) {
+  const { theme } = useTheme();
+  const currentTheme = theme || {};
+  const containerStyle = {
+    ...styles.container,
+    background: currentTheme.background || styles.container.background,
+    color: currentTheme.textPrimary || styles.container.color,
+  };
+
   // REMOVED: userLevel, userXP, userProfile, loading states.
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -209,7 +218,7 @@ function LevelRoadmap({ level, xp }) {
   const progressPercent = getProgressPercentage();
 
   return (
-    <div style={styles.container}>
+    <div style={containerStyle}>
       {/* Confetti Effect */}
       {showConfetti && <Confetti />}
       

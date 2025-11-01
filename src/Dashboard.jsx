@@ -517,13 +517,60 @@ function Dashboard({ user, setUser, token, setToken }) {
             {[
               { title: 'Daily Tasks', icon: '📋' }, { title: 'Levels', icon: '🏆' }, { title: 'AI Assistant', icon: '🤖' },
               { title: 'Challenges', icon: '🎮' }, { title: 'Leaderboard', icon: '👑' }, { title: 'Calories', icon: '🔥' }, { title: 'Profile', icon: '👤' }
-            ].map((section, index) => (
-              <motion.button key={section.title} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => setActiveSection(index)}
-                style={{ padding: "12px 24px", borderRadius: "15px", border: "none", background: activeSection === index ? `linear-gradient(135deg, ${theme.accent}, ${theme.accentSecondary})` : theme.cardBg, color: activeSection === index ? "#fff" : theme.textSecondary, fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}>
-                <motion.span animate={{ rotate: activeSection === index ? [0, 5, -5, 0] : 0 }} transition={{ duration: 2, repeat: activeSection === index ? Infinity : 0 }}>{section.icon}</motion.span>
-                <span>{section.title}</span>
-              </motion.button>
-            ))}
+            ].map((section, index) => {
+              const isActive = activeSection === index;
+              const activeGradient = 'linear-gradient(135deg, #facc15, #f97316)';
+              const hoverGradient = isActive
+                ? 'linear-gradient(135deg, #fde68a, #fbbf24)'
+                : 'linear-gradient(135deg, rgba(250, 204, 21, 0.25), rgba(253, 224, 71, 0.1))';
+              return (
+                <motion.button
+                  key={section.title}
+                  whileHover={{
+                    scale: 1.08,
+                    y: -4,
+                    boxShadow: isActive
+                      ? '0 14px 32px rgba(250, 204, 21, 0.45)'
+                      : '0 12px 28px rgba(250, 204, 21, 0.25)',
+                    background: hoverGradient,
+                    color: '#1f2937'
+                  }}
+                  whileTap={{ scale: 0.94 }}
+                  animate={isActive ? {
+                    boxShadow: [
+                      '0 8px 24px rgba(250, 204, 21, 0.3)',
+                      '0 16px 36px rgba(250, 204, 21, 0.55)',
+                      '0 10px 28px rgba(250, 204, 21, 0.35)'
+                    ]
+                  } : {}}
+                  transition={isActive ? { duration: 2.2, repeat: Infinity, repeatType: 'reverse' } : {}}
+                  onClick={() => setActiveSection(index)}
+                  style={{
+                    padding: "12px 24px",
+                    borderRadius: "15px",
+                    border: isActive ? '1px solid rgba(250, 204, 21, 0.65)' : '1px solid rgba(250, 204, 21, 0.25)',
+                    background: isActive ? activeGradient : 'rgba(250, 204, 21, 0.12)',
+                    color: isActive ? '#1f2937' : theme.textSecondary,
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "all 0.35s ease",
+                    boxShadow: isActive ? '0 12px 30px rgba(250, 204, 21, 0.35)' : '0 6px 18px rgba(15, 23, 42, 0.35)',
+                    backgroundSize: '200% 200%'
+                  }}
+                >
+                  <motion.span
+                    animate={{ rotate: isActive ? [0, 5, -5, 0] : 0 }}
+                    transition={{ duration: 2, repeat: isActive ? Infinity : 0 }}
+                  >
+                    {section.icon}
+                  </motion.span>
+                  <span>{section.title}</span>
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
 

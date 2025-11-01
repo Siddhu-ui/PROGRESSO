@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from './ThemeContext';
 
 // Helper component for accordion icons
 const AccordionIcon = ({ isOpen }) => (
@@ -240,6 +241,8 @@ const GuidancePanel = () => {
 
 // Main AI Assistant component
 export default function AIAssistant() {
+  const { theme } = useTheme();
+  const currentTheme = theme || {};
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([
     {
@@ -428,8 +431,14 @@ User question: ${trimmedPrompt}`
     }
   };
 
+  const containerStyle = {
+    ...styles.container,
+    background: currentTheme.background || styles.container.background,
+    color: currentTheme.textPrimary || styles.container.color,
+  };
+
   return (
-    <div style={styles.container}>
+    <div style={containerStyle}>
       <div style={styles.backgroundEffect}></div>
       <div style={styles.floatingOrb1}></div>
       <div style={styles.floatingOrb2}></div>
