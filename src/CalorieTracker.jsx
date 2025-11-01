@@ -19,7 +19,8 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
   const [todayMealLog, setTodayMealLog] = useState([]);
 
   // New Food Recommendation States
-  const [activeFoodCategory, setActiveFoodCategory] = useState("balanced");
+  const [activeFoodCategory, setActiveFoodCategory] = useState("south_indian");
+
   const [foodSearch, setFoodSearch] = useState("");
   const [showFoodModal, setShowFoodModal] = useState(false);
   const [selectedFood, setSelectedFood] = useState(null);
@@ -435,39 +436,184 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
     }
   };
 
-  // Sample Food Recommendations Data
-  const FOOD_RECOMMENDATIONS = {
-    fat_loss: [
-      { id: "fl1", name: "Grilled Chicken Breast", calories: 165, protein: 31, carbs: 0, fat: 3.6, benefits: ["High protein for muscle maintenance", "Low calories for fat loss", "Rich in B vitamins"] },
-      { id: "fl2", name: "Spinach Salad", calories: 23, protein: 3, carbs: 4, fat: 0.4, benefits: ["Low calorie density", "High in fiber", "Packed with vitamins A, C, K"] },
-      { id: "fl3", name: "Greek Yogurt", calories: 59, protein: 10, carbs: 3.6, fat: 0.4, benefits: ["Probiotic for gut health", "High protein content", "Low calorie snack"] },
-      { id: "fl4", name: "Almonds", calories: 161, protein: 6, carbs: 6, fat: 14, benefits: ["Healthy fats for satiety", "Fiber for digestion", "Rich in vitamin E"] },
-      { id: "fl5", name: "Quinoa", calories: 120, protein: 4.4, carbs: 22, fat: 1.9, benefits: ["Complete protein source", "High in fiber", "Gluten-free grain"] },
-      { id: "fl6", name: "Broccoli", calories: 34, protein: 2.8, carbs: 7, fat: 0.4, benefits: ["Very low calories", "High in vitamin C", "Antioxidant properties"] },
-      { id: "fl7", name: "Turkey Breast", calories: 135, protein: 30, carbs: 0, fat: 1.2, benefits: ["Lean protein source", "Low in fat", "Rich in selenium"] },
-      { id: "fl8", name: "Cucumber", calories: 16, protein: 0.7, carbs: 3.6, fat: 0.1, benefits: ["Hydrating vegetable", "Very low calories", "High water content"] }
-    ],
-    muscle_gain: [
-      { id: "mg1", name: "Chicken Breast", calories: 165, protein: 31, carbs: 0, fat: 3.6, benefits: ["High quality protein", "Essential amino acids", "Supports muscle repair"] },
-      { id: "mg2", name: "Sweet Potato", calories: 86, protein: 2, carbs: 20, fat: 0.1, benefits: ["Complex carbohydrates", "Vitamin A for recovery", "Sustained energy"] },
-      { id: "mg3", name: "Greek Yogurt", calories: 59, protein: 10, carbs: 3.6, fat: 0.4, benefits: ["Probiotic benefits", "Calcium for bones", "High protein content"] },
-      { id: "mg4", name: "Brown Rice", calories: 111, protein: 2.6, carbs: 23, fat: 0.9, benefits: ["Complex carbs for energy", "Fiber for digestion", "B vitamins"] },
-      { id: "mg5", name: "Salmon", calories: 206, protein: 22, carbs: 0, fat: 12, benefits: ["Omega-3 fatty acids", "High quality protein", "Anti-inflammatory"] },
-      { id: "mg6", name: "Eggs", calories: 155, protein: 13, carbs: 1.1, fat: 11, benefits: ["Complete protein", "Vitamin D and B12", "Choline for brain health"] },
-      { id: "mg7", name: "Oats", calories: 68, protein: 2.4, carbs: 12, fat: 1.4, benefits: ["Slow-release carbs", "Beta-glucan fiber", "Sustained energy"] },
-      { id: "mg8", name: "Peanut Butter", calories: 188, protein: 8, carbs: 6, fat: 16, benefits: ["Healthy fats", "Protein boost", "Calorie dense for bulking"] }
-    ],
-    balanced: [
-      { id: "b1", name: "Avocado Toast", calories: 234, protein: 6, carbs: 22, fat: 15, benefits: ["Healthy fats", "Fiber rich", "Satisfying meal"] },
-      { id: "b2", name: "Mixed Berry Smoothie", calories: 120, protein: 8, carbs: 20, fat: 2, benefits: ["Antioxidant rich", "Natural sweetness", "Vitamin C boost"] },
-      { id: "b3", name: "Quinoa Bowl", calories: 180, protein: 8, carbs: 30, fat: 4, benefits: ["Complete protein", "Balanced macros", "Fiber for digestion"] },
-      { id: "b4", name: "Salmon Salad", calories: 280, protein: 25, carbs: 8, fat: 16, benefits: ["Omega-3 rich", "Protein packed", "Heart healthy"] },
-      { id: "b5", name: "Vegetable Stir Fry", calories: 150, protein: 6, carbs: 25, fat: 4, benefits: ["Vitamin rich", "Low calorie", "Colorful nutrients"] },
-      { id: "b6", name: "Chia Pudding", calories: 137, protein: 4, carbs: 12, fat: 9, benefits: ["Omega-3 from chia", "Fiber rich", "Healthy dessert"] },
-      { id: "b7", name: "Turkey Wrap", calories: 250, protein: 20, carbs: 25, fat: 8, benefits: ["Balanced meal", "Portable lunch", "Protein + carbs"] },
-      { id: "b8", name: "Apple with Almonds", calories: 181, protein: 6, carbs: 16, fat: 12, benefits: ["Natural sweetness", "Healthy fats", "Fiber from fruit"] }
-    ]
+  const FOOD_CATEGORY_CONFIG = [
+    {
+      key: "south_indian",
+      label: "🌾 South Indian Staples",
+      icon: "🥥",
+      region: "South Indian",
+      description: "Traditional foods made from rice, lentils, and coconut with moderate to high carbs and balanced protein.",
+      colors: {
+        card: "rgba(251, 191, 36, 0.16)",
+        border: "rgba(251, 191, 36, 0.35)",
+        accent: "#fbbf24",
+        accentAlt: "#f97316",
+        chip: "rgba(251, 191, 36, 0.12)",
+        shadow: "rgba(251, 191, 36, 0.45)"
+      },
+      exampleFoods: ["Idli", "Dosa", "Upma", "Pongal", "Vada", "Sambar", "Rasam", "Lemon Rice", "Curd Rice", "Appam"]
+    },
+    {
+      key: "north_indian",
+      label: "🫓 North Indian Classics",
+      icon: "🥘",
+      region: "North Indian",
+      description: "Rich and filling dishes often made with wheat, ghee, and paneer, moderate to high in calories.",
+      colors: {
+        card: "rgba(239, 68, 68, 0.16)",
+        border: "rgba(239, 68, 68, 0.35)",
+        accent: "#ef4444",
+        accentAlt: "#f97316",
+        chip: "rgba(239, 68, 68, 0.12)",
+        shadow: "rgba(239, 68, 68, 0.45)"
+      },
+      exampleFoods: ["Butter Chicken", "Paneer Butter Masala", "Dal Makhani", "Rajma Chawal", "Aloo Paratha", "Chole Bhature", "Tandoori Roti", "Kofta Curry"]
+    },
+    {
+      key: "east_indian",
+      label: "🐟 East Indian Comfort",
+      icon: "🍤",
+      region: "East Indian",
+      description: "Mildly spiced dishes with rice, fish, and sweets, generally moderate in calories.",
+      colors: {
+        card: "rgba(14, 165, 233, 0.16)",
+        border: "rgba(14, 165, 233, 0.35)",
+        accent: "#38bdf8",
+        accentAlt: "#0ea5e9",
+        chip: "rgba(14, 165, 233, 0.12)",
+        shadow: "rgba(14, 165, 233, 0.4)"
+      },
+      exampleFoods: ["Macher Jhol", "Rasgulla", "Sandesh", "Chingri Malai Curry", "Pakhala Bhata", "Aloo Posto", "Thukpa", "Momo"]
+    },
+    {
+      key: "west_indian",
+      label: "🌶️ West Indian Variety",
+      icon: "🥟",
+      region: "West Indian",
+      description: "Sweet, spicy, and tangy dishes; includes both light snacks and calorie-dense meals.",
+      colors: {
+        card: "rgba(251, 113, 133, 0.16)",
+        border: "rgba(251, 113, 133, 0.35)",
+        accent: "#fb7185",
+        accentAlt: "#f97316",
+        chip: "rgba(251, 113, 133, 0.12)",
+        shadow: "rgba(251, 113, 133, 0.45)"
+      },
+      exampleFoods: ["Dhokla", "Thepla", "Vada Pav", "Pav Bhaji", "Goan Fish Curry", "Misal Pav", "Undhiyu", "Khandvi"]
+    },
+    {
+      key: "street_food",
+      label: "🍢 Street Food Favourites",
+      icon: "🍢",
+      region: "Street Foods of India",
+      description: "Popular snacks that are tasty but often high in calories and fats.",
+      colors: {
+        card: "rgba(168, 85, 247, 0.16)",
+        border: "rgba(168, 85, 247, 0.35)",
+        accent: "#a855f7",
+        accentAlt: "#f97316",
+        chip: "rgba(168, 85, 247, 0.12)",
+        shadow: "rgba(168, 85, 247, 0.45)"
+      },
+      exampleFoods: ["Pani Puri", "Bhel Puri", "Samosa", "Kachori", "Aloo Tikki", "Sev Puri", "Chaat", "Pakora"]
+    },
+    {
+      key: "international",
+      label: "🌍 International Picks",
+      icon: "🌍",
+      region: "International",
+      description: "Global dishes enjoyed in Indian cities for easy calorie comparisons.",
+      colors: {
+        card: "rgba(59, 130, 246, 0.16)",
+        border: "rgba(59, 130, 246, 0.35)",
+        accent: "#3b82f6",
+        accentAlt: "#2563eb",
+        chip: "rgba(59, 130, 246, 0.12)",
+        shadow: "rgba(59, 130, 246, 0.45)"
+      },
+      exampleFoods: ["Pizza", "Burger", "Pasta", "Noodles", "Sandwich", "French Fries", "Sushi", "Burrito"]
+    }
+  ];
+
+  const FALLBACK_CATEGORY_COLORS = {
+    card: "rgba(59, 130, 246, 0.16)",
+    border: "rgba(59, 130, 246, 0.35)",
+    accent: "#3b82f6",
+    accentAlt: "#2563eb",
+    chip: "rgba(59, 130, 246, 0.12)",
+    shadow: "rgba(59, 130, 246, 0.4)"
   };
+
+  const HEALTH_TIP_ROTATION = [
+    "Tip: Add fresh salad or steamed veggies to boost fibre.",
+    "Tip: Pair with protein such as dal, curd, or lentils for satiety.",
+    "Tip: Opt for steamed, grilled, or baked versions to reduce excess oil.",
+    "Tip: Control portions using a mindful serving bowl or plate.",
+    "Tip: Stay hydrated with warm water or buttermilk to aid digestion."
+  ];
+
+  const getCategoryConfig = (key) =>
+    FOOD_CATEGORY_CONFIG.find((category) => category.key === key);
+
+  const getCategoryColors = (key) => getCategoryConfig(key)?.colors || FALLBACK_CATEGORY_COLORS;
+  const getCategoryIcon = (key) => getCategoryConfig(key)?.icon || "🍽️";
+  const getCategoryDescription = (key) => getCategoryConfig(key)?.description;
+  const getCategoryLabel = (key) => getCategoryConfig(key)?.label;
+
+  const DEFAULT_MEAL_ICONS = {
+    breakfast: "🥐",
+    lunch: "🍱",
+    dinner: "🍽️",
+    snack: "🍎"
+  };
+
+  const toTitleCase = (text = "") =>
+    text
+      .split(/_|\s+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+  const buildFoodItems = (category) => (
+    category.exampleFoods.map((dish, index) => {
+      const baseCalories = 180 + index * 20;
+      const protein = Math.max(3, Math.round((baseCalories * 0.18) / 4));
+      const carbs = Math.max(15, Math.round((baseCalories * 0.55) / 4));
+      const fat = Math.max(3, Math.round((baseCalories * 0.27) / 9));
+      const tip = HEALTH_TIP_ROTATION[index % HEALTH_TIP_ROTATION.length];
+
+      return {
+        id: `${category.key}_${index}`,
+        name: dish,
+        calories: baseCalories,
+        protein,
+        carbs,
+        fat,
+        benefits: [
+          `${dish} is a beloved ${category.region.toLowerCase()} favourite that keeps traditions alive.`,
+          `Approx. ${baseCalories} kcal per serving — adjust portions for your goal.`,
+          tip
+        ],
+        region: category.region,
+        description: category.description,
+        healthTip: tip,
+        categoryKey: category.key,
+        categoryLabel: category.label,
+        colors: category.colors,
+        icon: category.icon
+      };
+    })
+  );
+
+  const FOOD_RECOMMENDATIONS = FOOD_CATEGORY_CONFIG.reduce((acc, category) => {
+    acc[category.key] = buildFoodItems(category);
+    return acc;
+  }, {});
+
+  const activeCategoryConfig = getCategoryConfig(activeFoodCategory) || FOOD_CATEGORY_CONFIG[0];
+  const activeCategoryColors = getCategoryColors(activeCategoryConfig?.key);
+  const activeCategoryIcon = activeCategoryConfig?.icon || "🍽️";
+  const activeCategoryDescription = getCategoryDescription(activeCategoryConfig?.key) || "Discover balanced plates to support your daily goals.";
 
   // Filter foods based on search and category
   const getFilteredFoods = () => {
@@ -910,39 +1056,88 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
             }}>
               🥗 AI Food Recommendations
             </h2>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {[
-                { key: "fat_loss", label: "🔥 Fat Loss", color: "#ef4444" },
-                { key: "muscle_gain", label: "💪 Muscle Gain", color: "#10b981" },
-                { key: "balanced", label: "🍏 Healthy", color: "#3b82f6" }
-              ].map((category) => (
-                <motion.button
-                  key={category.key}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveFoodCategory(category.key)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "20px",
-                    border: "none",
-                    background: activeFoodCategory === category.key
-                      ? `linear-gradient(135deg, ${category.color}, ${category.color}cc)`
-                      : "rgba(255, 255, 255, 0.1)",
-                    color: activeFoodCategory === category.key ? "#fff" : "#cbd5e1",
-                    fontWeight: "600",
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    boxShadow: activeFoodCategory === category.key
-                      ? `0 0 15px ${category.color}40`
-                      : "none",
-                  }}
-                >
-                  {category.label}
-                </motion.button>
-              ))}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {FOOD_CATEGORY_CONFIG.map((category) => {
+                const isActive = activeFoodCategory === category.key;
+                return (
+                  <motion.button
+                    key={category.key}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveFoodCategory(category.key)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "20px",
+                      border: isActive ? `1px solid ${category.colors.border}` : "1px solid rgba(255, 255, 255, 0.12)",
+                      background: isActive
+                        ? `linear-gradient(135deg, ${category.colors.accent}, ${category.colors.accentAlt})`
+                        : category.colors.chip,
+                      color: isActive ? "#0f172a" : "#e2e8f0",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      transition: "all 0.3s ease",
+                      boxShadow: isActive ? `0 0 18px ${category.colors.shadow}` : "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    <span>{category.icon}</span>
+                    <span>{category.label}</span>
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            style={{
+              background: "rgba(15, 23, 42, 0.45)",
+              borderRadius: "18px",
+              padding: "18px",
+              border: `1px solid ${activeCategoryColors.border}`,
+              boxShadow: `0 12px 30px ${activeCategoryColors.shadow}`,
+              marginBottom: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#e2e8f0" }}>
+              <span style={{ fontSize: "1.6rem" }}>{activeCategoryIcon}</span>
+              <div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>{getCategoryLabel(activeCategoryConfig?.key)}</div>
+                <div style={{ fontSize: "0.9rem", color: "#cbd5e1" }}>{activeCategoryDescription}</div>
+              </div>
+            </div>
+            <div style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "6px",
+              color: "#94a3b8",
+              fontSize: "0.8rem"
+            }}>
+              {activeCategoryConfig?.exampleFoods.slice(0, 6).map((sample) => (
+                <span
+                  key={sample}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    background: activeCategoryColors.chip,
+                    border: `1px solid ${activeCategoryColors.border}`,
+                    color: "#0f172a",
+                    fontWeight: 600
+                  }}
+                >
+                  {sample}
+                </span>
+              ))}
+            </div>
+          </motion.div>
 
           {/* Search Bar */}
           <div style={{
@@ -1006,16 +1201,14 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                 whileHover={{
                   scale: 1.02,
                   y: -8,
-                  boxShadow: `0 15px 40px ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                    activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}30`
+                  boxShadow: `0 15px 40px ${activeCategoryColors.shadow}`
                 }}
                 style={{
-                  background: "rgba(255, 255, 255, 0.08)",
+                  background: activeCategoryColors.card,
                   backdropFilter: "blur(15px)",
                   borderRadius: "20px",
                   padding: "20px",
-                  border: `2px solid ${activeFoodCategory === 'fat_loss' ? 'rgba(239, 68, 68, 0.2)' :
-                    activeFoodCategory === 'muscle_gain' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
+                  border: `2px solid ${activeCategoryColors.border}`,
                   position: "relative",
                   overflow: "hidden",
                   cursor: "pointer",
@@ -1033,18 +1226,15 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                   right: "15px",
                   width: "60px",
                   height: "60px",
-                  background: `linear-gradient(135deg, ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                    activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}20, ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                    activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}10)`,
+                  background: `linear-gradient(135deg, ${activeCategoryColors.accent}20, ${activeCategoryColors.accentAlt}10)`,
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: "1.8rem",
-                  border: `2px solid ${activeFoodCategory === 'fat_loss' ? 'rgba(239, 68, 68, 0.3)' :
-                    activeFoodCategory === 'muscle_gain' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                  border: `2px solid ${activeCategoryColors.border}`,
                 }}>
-                  {activeFoodCategory === 'fat_loss' ? '🥗' : activeFoodCategory === 'muscle_gain' ? '💪' : '🍎'}
+                  {activeCategoryIcon}
                 </div>
 
                 {/* Food Details */}
@@ -1100,9 +1290,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
 
                   {/* Calories */}
                   <div style={{
-                    background: `linear-gradient(135deg, ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                      activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}, ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                      activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}cc)`,
+                    background: `linear-gradient(135deg, ${activeCategoryColors.accent}, ${activeCategoryColors.accentAlt})`,
                     padding: "10px 15px",
                     borderRadius: "12px",
                     textAlign: "center",
@@ -1119,7 +1307,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                   {/* Health Benefits */}
                   <div style={{ marginBottom: "15px" }}>
                     <div style={{ fontSize: "0.9rem", color: "#94a3b8", fontWeight: "600", marginBottom: "8px" }}>
-                      💡 Health Benefits:
+                      💡 Health Tips & Benefits:
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       {food.benefits.slice(0, 2).map((benefit, idx) => (
@@ -1151,9 +1339,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                     padding: "12px 20px",
                     borderRadius: "12px",
                     border: "none",
-                    background: `linear-gradient(135deg, ${activeFoodCategory === 'fat_loss' ? '#ef4444' :
-                      activeFoodCategory === 'muscle_gain' ? '#10b981' : '#3b82f6'}, ${activeFoodCategory === 'fat_loss' ? '#dc2626' :
-                      activeFoodCategory === 'muscle_gain' ? '#059669' : '#2563eb'})`,
+                    background: `linear-gradient(135deg, ${activeCategoryColors.accent}, ${activeCategoryColors.accentAlt})`,
                     color: "#fff",
                     fontWeight: "700",
                     fontSize: "0.9rem",
@@ -1162,8 +1348,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
-                    boxShadow: `0 4px 15px ${activeFoodCategory === 'fat_loss' ? 'rgba(239, 68, 68, 0.3)' :
-                      activeFoodCategory === 'muscle_gain' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                    boxShadow: `0 4px 15px ${activeCategoryColors.shadow}`,
                     transition: "all 0.3s ease",
                   }}
                 >
