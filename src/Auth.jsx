@@ -79,7 +79,7 @@ function Auth({ setUser, setToken }) {
         setMessage(isLogin ? "✅ Welcome back! Redirecting..." : "✅ Account created successfully! Redirecting...");
 
         setTimeout(() => {
-          navigate("/");
+          navigate("/dashboard");
         }, 1000);
       }
     } catch (err) {
@@ -502,3 +502,21 @@ function Auth({ setUser, setToken }) {
 }
 
 export default Auth;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

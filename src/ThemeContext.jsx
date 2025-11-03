@@ -22,7 +22,7 @@ const themes = {
     accentSecondary: '#764ba2',
     border: 'rgba(0, 0, 0, 0.1)',
     shadow: 'rgba(0, 0, 0, 0.1)',
-    navBg: 'rgba(255, 255, 255, 0.95)',
+    navBg: 'linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45))',
   },
   dark: {
     name: 'Dark',
@@ -34,7 +34,7 @@ const themes = {
     accentSecondary: '#a855f7',
     border: 'rgba(255, 255, 255, 0.1)',
     shadow: 'rgba(0, 0, 0, 0.3)',
-    navBg: 'rgba(15, 23, 42, 0.95)',
+    navBg: 'linear-gradient(135deg, rgba(15, 23, 42, 0.55), rgba(30, 41, 59, 0.35))',
   },
   custom: {
     name: 'Custom',
@@ -46,7 +46,7 @@ const themes = {
     accentSecondary: '#f59e0b',
     border: 'rgba(255, 255, 255, 0.2)',
     shadow: 'rgba(0, 0, 0, 0.2)',
-    navBg: 'rgba(102, 126, 234, 0.9)',
+    navBg: 'linear-gradient(135deg, rgba(102, 126, 234, 0.32), rgba(118, 75, 162, 0.2))',
   }
 };
 

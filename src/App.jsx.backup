@@ -1,0 +1,666 @@
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Palette, LogOut } from "lucide-react";
+import { ThemeProvider, useTheme } from "./ThemeContext";
+import ThemeCustomizer from "./ThemeCustomizer";
+import LandingPage from "./components/LandingPage";
+import LoginPage from "./LoginPage";
+import Dashboard from "./Dashboard";
+import Profile from "./ProfilePage";
+import Leaderboard from "./Leaderboard";
+import AdventureMap from "./AdventureMap.jsx";
+import Game from "./Game";
+import AIAssistant from "./AIAssistant";
+import LevelRoadmap from "./LevelRoadmap";
+import { onAuthStateChange, db, logout } from './firebase';
+import { doc, getDoc } from "firebase/firestore";
+
+function AnimatedRoutes({ user, setUser, token, setToken }) {
+  const location = useLocation();
+  const { theme } = useTheme();
+  const navigate = useNavigate();
+
+  // Handle sign in from LandingPage
+  const handleSignIn = () => {
+    console.log('Sign in clicked, navigating to /auth');
+    navigate('/auth');
+  };
+
+  // Handle enter app (after sign in)
+  const handleEnterApp = () => {
+    console.log('Enter app clicked, user:', user);
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        {/* Landing Page */}
+        <Route
+          path="/"
+          element={
+            <motion.div
+              custom="landing"
+              variants={pageVariants}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <LandingPage 
+                user={user} 
+                onSignIn={handleSignIn} 
+                onEnterApp={handleEnterApp} 
+              />
+            </motion.div>
+          }
+        />
+
+        {/* Auth Page */}
+        <Route
+          path="/auth"
+          element={
+            <motion.div
+              custom="auth"
+              variants={{
+                initial: { opacity: 0, scale: 0.95 },
+                in: {
+                  opacity: 1,
+                  scale: 1,
+                  transition: { duration: 0.4, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  scale: 0.9,
+                  transition: { duration: 0.3, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <LoginPage 
+                setUser={setUser} 
+                setToken={setToken} 
+                onSuccess={() => navigate('/dashboard')}
+              />
+            </motion.div>
+          }
+        />
+
+        {/* Dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              <motion.div
+                custom="dashboard"
+                variants={pageVariants}
+                initial="initial"
+                animate="in"
+                exit="out"
+              >
+                <Dashboard user={user} setUser={setUser} token={token} setToken={setToken} />
+              </motion.div>
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          }
+        />
+
+        {/* Profile */}
+        <Route
+          path="/profile"
+          element={
+            <motion.div
+              custom="profile"
+              variants={{
+                initial: { opacity: 0, x: 50 },
+                in: {
+                  opacity: 1,
+                  x: 0,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  x: -50,
+                  transition: { duration: 0.3, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <Profile user={user} setUser={setUser} />
+            </motion.div>
+          }
+        />
+
+        {/* Leaderboard */}
+        <Route
+          path="/leaderboard"
+          element={
+            <motion.div
+              custom="leaderboard"
+              variants={{
+                initial: { opacity: 0, scale: 0.9, y: 30 },
+                in: {
+                  opacity: 1,
+                  scale: 1,
+                  y: 0,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  scale: 0.95,
+                  y: -30,
+                  transition: { duration: 0.3, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <Leaderboard />
+            </motion.div>
+          }
+        />
+
+        {/* Adventure Map */}
+        <Route
+          path="/adventure"
+          element={
+            <motion.div
+              custom="adventure"
+              variants={{
+                initial: { opacity: 0, scale: 0.8 },
+                in: {
+                  opacity: 1,
+                  scale: 1,
+                  transition: { duration: 0.6, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  scale: 0.9,
+                  transition: { duration: 0.4, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <AdventureMap />
+            </motion.div>
+          }
+        />
+
+        {/* Game */}
+        <Route
+          path="/game"
+          element={
+            <motion.div
+              custom="game"
+              variants={{
+                initial: { opacity: 0, rotateY: -90 },
+                in: {
+                  opacity: 1,
+                  rotateY: 0,
+                  transition: { duration: 0.6, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  rotateY: 90,
+                  transition: { duration: 0.4, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <Game />
+            </motion.div>
+          }
+        />
+
+        {/* AI Assistant */}
+        <Route
+          path="/ai-assistant"
+          element={
+            <motion.div
+              custom="ai"
+              variants={{
+                initial: { opacity: 0, x: -100 },
+                in: {
+                  opacity: 1,
+                  x: 0,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  x: 100,
+                  transition: { duration: 0.3, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <AIAssistant />
+            </motion.div>
+          }
+        />
+
+        {/* Level Roadmap */}
+        <Route
+          path="/levels"
+          element={
+            <motion.div
+              custom="levels"
+              variants={{
+                initial: { opacity: 0, y: 100, scale: 0.8 },
+                in: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.7, ease: "easeOut" }
+                },
+                out: {
+                  opacity: 0,
+                  y: -100,
+                  scale: 0.9,
+                  transition: { duration: 0.4, ease: "easeIn" }
+                }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <LevelRoadmap user={user} />
+            </motion.div>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+
+function AppContent() {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isThemeCustomizerOpen, setIsThemeCustomizerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { theme } = useTheme();
+  
+  // Theme configuration
+  const fallbackTheme = useMemo(() => ({
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.1)',
+    textPrimary: '#ffffff',
+    textSecondary: '#e2e8f0',
+    accent: '#fbbf24',
+    accentSecondary: '#f59e0b',
+    border: 'rgba(255, 255, 255, 0.2)',
+    shadow: 'rgba(0, 0, 0, 0.2)',
+    navBg: 'linear-gradient(135deg, rgba(102, 126, 234, 0.32), rgba(118, 75, 162, 0.2))'
+  }), []);
+  
+  const currentTheme = theme || fallbackTheme;
+
+  const pageVariants = {
+    initial: { opacity: 0, scale: 0.98, y: 20 },
+    in: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut" }
+    },
+    out: { 
+      opacity: 0, 
+      scale: 1.02, 
+      y: -20,
+      transition: { duration: 0.4, ease: "easeIn" }
+    }
+  };
+
+  console.log('AppContent rendering, loading:', loading, 'user:', user);
+  
+  const fallbackTheme = {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+    cardBg: 'rgba(255, 255, 255, 0.1)',
+    textPrimary: '#ffffff',
+    textSecondary: '#e2e8f0',
+    accent: '#fbbf24',
+    accentSecondary: '#f59e0b',
+    border: 'rgba(255, 255, 255, 0.2)',
+    shadow: 'rgba(0, 0, 0, 0.2)',
+    navBg: 'linear-gradient(135deg, rgba(102, 126, 234, 0.32), rgba(118, 75, 162, 0.2))'
+  };
+
+  const currentTheme = theme || fallbackTheme;
+
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange(async (authUser) => {
+      if (authUser) {
+        try {
+          const [tokenValue, firestoreDoc] = await Promise.all([
+            authUser.getIdToken(),
+            getDoc(doc(db, 'users', authUser.uid))
+          ]);
+
+          const firestoreData = firestoreDoc.exists() ? firestoreDoc.data() : {};
+          const existingLocalUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+          const mergedUser = {
+            uid: authUser.uid,
+            email: authUser.email,
+            displayName: authUser.displayName,
+            photoURL: authUser.photoURL,
+            xp: firestoreData.xp ?? existingLocalUser.xp ?? 0,
+            level: firestoreData.level ?? existingLocalUser.level ?? 1,
+            tasksCompleted: firestoreData.tasksCompleted ?? existingLocalUser.tasksCompleted ?? 0,
+            streak: firestoreData.streak ?? existingLocalUser.streak ?? 0,
+            mindfulMinutes: firestoreData.mindfulMinutes ?? existingLocalUser.mindfulMinutes ?? 0,
+            skillsUnlocked: firestoreData.skillsUnlocked ?? existingLocalUser.skillsUnlocked ?? 0,
+            last_updated: firestoreData.last_updated ?? existingLocalUser.last_updated ?? null,
+            createdAt: firestoreData.createdAt ?? existingLocalUser.createdAt ?? null,
+          };
+
+          setUser(mergedUser);
+          setToken(tokenValue);
+
+          localStorage.setItem('token', tokenValue);
+          localStorage.setItem('user', JSON.stringify(mergedUser));
+        } catch (err) {
+          console.error('Failed to hydrate user profile:', err);
+          const fallbackToken = await authUser.getIdToken();
+          const fallbackUser = {
+            uid: authUser.uid,
+            email: authUser.email,
+            displayName: authUser.displayName,
+            photoURL: authUser.photoURL,
+          };
+          setUser(fallbackUser);
+          setToken(fallbackToken);
+          localStorage.setItem('token', fallbackToken);
+          localStorage.setItem('user', JSON.stringify(fallbackUser));
+        }
+      } else {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/auth');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []); // Empty dependency array since onAuthStateChange handles everything
+
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      // Clear local state first
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setToken(null);
+
+      // Then logout from Firebase
+      await logout();
+
+      // Navigation will be handled automatically by onAuthStateChange listener
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Fallback navigation in case auth state listener doesn't trigger
+      navigate('/auth');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+          color: "#fff",
+          fontFamily: "Segoe UI, sans-serif",
+        }}
+      >
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: "50px",
+              height: "50px",
+              border: "3px solid rgba(255,255,255,0.3)",
+              borderTop: "3px solid #fff",
+              borderRadius: "50%",
+              margin: "0 auto 20px",
+              animation: "spin 1s linear infinite",
+            }}
+          ></div>
+          <p>Loading your growth journey...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Top Header with Theme and Sign Out */}
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          zIndex: 200,
+          display: "flex",
+          gap: "12px",
+          padding: "20px",
+        }}
+      >
+        {/* Theme Button */}
+        <motion.button
+          whileHover={{ scale: 1.05, rotate: 15 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsThemeCustomizerOpen(true)}
+          style={{
+            padding: "12px",
+            borderRadius: "12px",
+            border: `1px solid ${currentTheme.border}`,
+            background: currentTheme.cardBg,
+            backdropFilter: "blur(20px)",
+            color: currentTheme.textPrimary,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: `0 4px 15px ${currentTheme.shadow}`,
+            transition: "all 0.3s ease",
+          }}
+          title="Theme Settings"
+        >
+          <Palette size={20} />
+        </motion.button>
+
+        {/* Sign Out Button - Only show if user is logged in */}
+        {user && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleLogout}
+            style={{
+              padding: "12px 20px",
+              borderRadius: "12px",
+              border: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              color: "#fff",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 15px rgba(239, 68, 68, 0.3)",
+              transition: "all 0.3s ease",
+            }}
+          >
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </motion.button>
+        )}
+      </motion.div>
+
+      {/* Optional Navbar - Only show if user is logged in and NOT on Dashboard */}
+      {user && location.pathname !== "/" && (
+        <motion.nav
+          initial={{ y: -80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            gap: "2rem",
+            padding: "16px 40px",
+            marginBottom: "20px",
+            marginTop: "60px",
+            paddingInline: "clamp(24px, 6vw, 64px)",
+            backdropFilter: "blur(24px) saturate(170%)",
+            WebkitBackdropFilter: "blur(24px) saturate(170%)",
+            background: currentTheme.navBg,
+            borderRadius: "22px",
+            border: `1px solid ${currentTheme.border}`,
+            boxShadow: `0 12px 45px ${currentTheme.shadow}`,
+            backgroundClip: "padding-box",
+          }}
+        >
+          {[
+            { to: "/", label: "🏠 Dashboard" },
+            { to: "/levels", label: "⭐ Levels" },
+            { to: "/leaderboard", label: "🏆 Leaderboard" },
+            { to: "/profile", label: "👤 Profile" },
+            { to: "/adventure", label: "🗺 Adventure" },
+            { to: "/game", label: "🎮 Game" },
+            { to: "/ai-assistant", label: "🤖 AI" },
+          ].map((link) => (
+            <motion.div whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} key={link.to}>
+              <Link
+                to={link.to}
+                style={{
+                  fontWeight: 600,
+                  color: currentTheme.textPrimary,
+                  textDecoration: "none",
+                  fontSize: "1rem",
+                  transition: "color 0.3s ease",
+                }}
+                onMouseEnter={(e) => (e.target.style.color = currentTheme.accent)}
+                onMouseLeave={(e) => (e.target.style.color = currentTheme.textPrimary)}
+              >
+                {link.label}
+              </Link>
+            </motion.div>
+          ))}
+        </motion.nav>
+      )}
+
+      {/* Theme Customizer Modal */}
+      <ThemeCustomizer 
+        isOpen={isThemeCustomizerOpen} 
+        onClose={() => setIsThemeCustomizerOpen(false)} 
+      />
+
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={
+            <motion.div
+              custom="landing"
+              variants={pageVariants}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <LandingPage 
+                user={user} 
+                onSignIn={handleSignIn} 
+                onEnterApp={handleEnterApp}
+              />
+            </motion.div>
+          } />
+          
+          <Route path="/auth" element={
+            <motion.div
+              custom="auth"
+              variants={{
+                initial: { opacity: 0, scale: 0.95 },
+                in: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } },
+                out: { opacity: 0, scale: 0.9, transition: { duration: 0.3, ease: "easeIn" } }
+              }}
+              initial="initial"
+              animate="in"
+              exit="out"
+            >
+              <LoginPage 
+                setUser={setUser} 
+                setToken={setToken} 
+                onSuccess={() => navigate('/dashboard')} 
+              />
+            </motion.div>
+          } />
+          
+          <Route path="/dashboard" element={
+            user ? (
+              <motion.div
+                custom="dashboard"
+                variants={pageVariants}
+                initial="initial"
+                animate="in"
+                exit="out"
+              >
+                <Dashboard user={user} setUser={setUser} token={token} setToken={setToken} />
+              </motion.div>
+            ) : (
+              <Navigate to="/auth" replace />
+            )
+          } />
+          
+          {/* Add other protected routes here */}
+          
+        </Routes>
+      </AnimatePresence>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+export default App;

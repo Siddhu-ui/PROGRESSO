@@ -31,7 +31,8 @@ export default function LoginPage({ setUser, setToken }) {
       }
 
       // Success - redirect to dashboard
-      navigate("/");
+      console.log("Login successful, navigating to /dashboard");
+      navigate("/dashboard");
     } catch (err) {
       setError("Login failed. Please try again.");
     } finally {
@@ -52,7 +53,8 @@ export default function LoginPage({ setUser, setToken }) {
       }
 
       // Success - redirect to dashboard
-      navigate("/");
+      console.log("Google login successful, navigating to /dashboard");
+      navigate("/dashboard");
     } catch (err) {
       setError("Google login failed. Please try again.");
     } finally {

@@ -508,11 +508,26 @@ function Dashboard({ user, setUser, token, setToken }) {
         <div style={{ position: "absolute", top: "10%", left: "5%", width: "300px", height: "300px", background: `radial-gradient(circle, ${theme.accent}10 0%, transparent 70%)`, borderRadius: "50%", animation: "float 20s ease-in-out infinite" }} />
         <div style={{ position: "absolute", top: "60%", right: "8%", width: "200px", height: "200px", background: `radial-gradient(circle, ${theme.accentSecondary}10 0%, transparent 70%)`, borderRadius: "50%", animation: "float 25s ease-in-out infinite reverse" }} />
 
-        {/* Header Navigation (Unchanged) */}
+        {/* Header Navigation */}
         <motion.div
           initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-          style={{ position: "sticky", top: 0, zIndex: 100, background: theme.navBg, backdropFilter: "blur(20px) saturate(180%)", borderBottom: `1px solid ${theme.border}`, padding: "20px 0" }}
+          style={{
+            position: "sticky",
+            top: 16,
+            zIndex: 100,
+            width: "min(92%, 1100px)",
+            margin: "0 auto",
+            padding: "18px clamp(20px, 5vw, 40px)",
+            background: theme.navBg,
+            backdropFilter: "blur(24px) saturate(170%)",
+            WebkitBackdropFilter: "blur(24px) saturate(170%)",
+            borderRadius: "26px",
+            border: `1px solid ${theme.border}`,
+            boxShadow: `0 18px 48px ${theme.shadow}`,
+            backgroundClip: "padding-box",
+          }}
         >
+
           <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 40px", display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap" }}>
             {[
               { title: 'Daily Tasks', icon: '📋' }, { title: 'Levels', icon: '🏆' }, { title: 'AI Assistant', icon: '🤖' },
@@ -693,7 +708,7 @@ function Dashboard({ user, setUser, token, setToken }) {
                                 bottom: 0,
                                 width: `${overallCompletionPercent}%`,
                                 background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 30%, #ec4899 60%, #f59e0b 100%)",
-                                transition: "width 0.2s ease",
+                                transition: "width 0.1s ease",
                                 borderRadius: "16px",
                                 boxShadow: "0 0 15px rgba(59, 130, 246, 0.4)"
                               }}

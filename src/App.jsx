@@ -307,7 +307,7 @@ function AppContent() {
     accentSecondary: '#f59e0b',
     border: 'rgba(255, 255, 255, 0.2)',
     shadow: 'rgba(0, 0, 0, 0.2)',
-    navBg: 'rgba(102, 126, 234, 0.9)'
+    navBg: 'linear-gradient(135deg, rgba(102, 126, 234, 0.32), rgba(118, 75, 162, 0.2))'
   };
 
   const currentTheme = theme || fallbackTheme;
@@ -515,10 +515,14 @@ function AppContent() {
             padding: "16px 40px",
             marginBottom: "20px",
             marginTop: "60px",
-            backdropFilter: "blur(20px) saturate(180%)",
+            paddingInline: "clamp(24px, 6vw, 64px)",
+            backdropFilter: "blur(24px) saturate(170%)",
+            WebkitBackdropFilter: "blur(24px) saturate(170%)",
             background: currentTheme.navBg,
-            borderRadius: "18px",
-            boxShadow: `0 8px 32px ${currentTheme.shadow}`,
+            borderRadius: "22px",
+            border: `1px solid ${currentTheme.border}`,
+            boxShadow: `0 12px 45px ${currentTheme.shadow}`,
+            backgroundClip: "padding-box",
           }}
         >
           {[
@@ -558,6 +562,11 @@ function AppContent() {
 
       {/* Routes - All accessible without authentication */}
       <AnimatedRoutes user={user} setUser={setUser} token={token} setToken={setToken} />
+      
+      {/* Add catch-all route for /dashboard to redirect to root */}
+      <Routes>
+        <Route path="/dashboard" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   );
 }
