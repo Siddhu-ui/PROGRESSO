@@ -7,28 +7,23 @@ import {
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 
-// XP Requirements for each level (cumulative)
+// XP Requirements for each level (cumulative) - Updated to match LevelRoadmap progression
 const LEVEL_XP_REQUIREMENTS = {
-  1: 0,
-  2: 1000,
-  3: 3000,
-  4: 6000,
-  5: 10000,
-  6: 15000,
-  7: 21000,
-  8: 28000,
-  9: 36000,
-  10: 45000,
-  11: 55000,
-  12: 66000,
-  13: 78000,
-  14: 91000,
-  15: 105000,
-  16: 120000,
-  17: 136000,
-  18: 153000,
-  19: 171000,
-  20: 190000,
+  1: 0,      // Level 1: 0-249 XP (Sprout)
+  2: 250,    // Level 2: 250-499 XP (Seedling)
+  3: 500,    // Level 3: 500-749 XP (Bloom)
+  4: 750,    // Level 4: 750-999 XP (Growth)
+  5: 1000,   // Level 5: 1000-1249 XP (Flourish)
+  6: 1250,   // Level 6: 1250-1499 XP (Thrive)
+  7: 1500,   // Level 7: 1500-1749 XP (Excel)
+  8: 1750,   // Level 8: 1750-1999 XP (Master)
+  9: 2000,   // Level 9: 2000-2249 XP (Sage)
+  10: 2250,  // Level 10: 2250-2499 XP (Legend)
+  11: 2500,  // Level 11: 2500-2749 XP (Champion)
+  12: 2750,  // Level 12: 2750-2999 XP (Hero)
+  13: 3000,  // Level 13: 3000-3249 XP (Titan)
+  14: 3250,  // Level 14: 3250-3499 XP (Oracle)
+  15: 3500,  // Level 15: 3500+ XP (Divine)
 };
 
 // Function to get XP required for next level
@@ -36,12 +31,25 @@ const getXPForLevel = (level) => {
   return LEVEL_XP_REQUIREMENTS[level] || 0;
 };
 
+// Function to calculate current level based on XP
+const getLevelFromXP = (xp) => {
+  let level = 1;
+  for (let i = 2; i <= 15; i++) {
+    if (xp >= LEVEL_XP_REQUIREMENTS[i]) {
+      level = i;
+    } else {
+      break;
+    }
+  }
+  return level;
+};
+
 // Function to calculate progress percentage towards next level
 const getProgressPercentage = (currentXP, currentLevel) => {
   const currentLevelXP = getXPForLevel(currentLevel);
   const nextLevelXP = getXPForLevel(currentLevel + 1);
 
-  if (nextLevelXP === 0) return 100; // Max level reached
+  if (nextLevelXP === 0 || currentLevel >= 15) return 100; // Max level (15) reached
 
   const xpForNextLevel = nextLevelXP - currentLevelXP;
   const currentLevelProgress = currentXP - currentLevelXP;
@@ -49,15 +57,24 @@ const getProgressPercentage = (currentXP, currentLevel) => {
   return Math.min((currentLevelProgress / xpForNextLevel) * 100, 100);
 };
 
-// XP Badge Thresholds with darker, more vibrant colors
+// XP Badge Thresholds with updated progression
 const XP_BADGES = [
-  { name: "Novice", min: 0, max: 999, color: "#22c55e", icon: "🌱" },
-  { name: "Apprentice", min: 1000, max: 2999, color: "#3b82f6", icon: "📚" },
-  { name: "Warrior", min: 3000, max: 4999, color: "#a855f7", icon: "⚔️" },
-  { name: "Champion", min: 5000, max: 7999, color: "#ec4899", icon: "🛡️" },
-  { name: "Gladiator", min: 8000, max: 9999, color: "#f59e0b", icon: "🏆" },
-  { name: "Master", min: 10000, max: 14999, color: "#ef4444", icon: "👑" },
-  { name: "Legend", min: 15000, max: Infinity, color: "#fbbf24", icon: "⭐" },
+  { name: "Seedling", min: 0, max: 249, color: "#22c55e", icon: "🌱" },
+  { name: "Sprout", min: 250, max: 749, color: "#3b82f6", icon: "🌿" },
+  { name: "Bud", min: 750, max: 1499, color: "#8b5cf6", icon: "🌱" },
+  { name: "Flower", min: 1500, max: 2499, color: "#ec4899", icon: "🌸" },
+  { name: "Blossom", min: 2500, max: 3749, color: "#f59e0b", icon: "🌺" },
+  { name: "Bloom", min: 3750, max: 5249, color: "#ef4444", icon: "🌼" },
+  { name: "Radiant", min: 5250, max: 6999, color: "#fbbf24", icon: "✨" },
+  { name: "Luminous", min: 7000, max: 8999, color: "#06b6d4", icon: "🌟" },
+  { name: "Brilliant", min: 9000, max: 11249, color: "#8b5cf6", icon: "💎" },
+  { name: "Aureate", min: 11250, max: 13749, color: "#f59e0b", icon: "🏆" },
+  { name: "Celestial", min: 13750, max: 16499, color: "#ec4899", icon: "🌠" },
+  { name: "Ethereal", min: 16500, max: 19499, color: "#a855f7", icon: "🌌" },
+  { name: "Transcendent", min: 19500, max: 22999, color: "#3b82f6", icon: "🌠" },
+  { name: "Ascendant", min: 23000, max: 26999, color: "#f43f5e", icon: "🚀" },
+  { name: "Mythic", min: 27000, max: 31499, color: "#8b5cf6", icon: "🏆" },
+  { name: "Legendary", min: 31500, max: Infinity, color: "#f59e0b", icon: "🌟" }
 ];
 
 const getBadge = (xp) => {

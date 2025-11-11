@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,35 +11,74 @@ import Leaderboard from "./Leaderboard";
 import CalorieTracker from "./CalorieTracker";
 import UserProfile from "./UserProfile";
 import AIAssistant from "./AIAssistant";
+import Icon from "./components/ui/Icon";
 
+// GlassIcon component (Unchanged)
+const GlassIcon = ({ icon, color = 'rgba(255, 255, 255, 0.1)', size = 'md', className = '' }) => {
+  const sizeMap = {
+    sm: { container: 'w-8 h-8', iconSize: 14 },
+    md: { container: 'w-12 h-12', iconSize: 20 },
+    lg: { container: 'w-16 h-16', iconSize: 28 },
+  };
+
+  return (
+    <div 
+      className={`${sizeMap[size].container} ${className} rounded-full flex items-center justify-center backdrop-blur-lg`}
+      style={{
+        background: `linear-gradient(135deg, ${color}20, ${color}40)`,
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)'
+      }}
+    >
+      <Icon 
+        name={icon} 
+        size={sizeMap[size].iconSize} 
+        color={color} 
+      />
+    </div>
+  );
+};
 
 const API_URL = 'http://localhost:5000/api';
+
+// Task categories (Unchanged)
 const xpTasks = [
-  { id: 'drink_water', name: 'Drink Water', xp: 5, icon: '💧', color: '#06b6d4' },
-  { id: 'breakfast', name: 'Breakfast', xp: 10, icon: '🥐', color: '#f59e0b' },
-  { id: 'lunch', name: 'Lunch', xp: 15, icon: '🍱', color: '#10b981' },
-  { id: 'dinner', name: 'Dinner', xp: 15, icon: '🍽️', color: '#ef4444' },
-  { id: 'take_break', name: 'Take Break', xp: 8, icon: '☕', color: '#8b5cf6' },
-  { id: 'run', name: 'Run', xp: 20, icon: '🏃‍♂️', color: '#f97316' },
-  { id: 'coding', name: 'Coding', xp: 25, icon: '💻', color: '#3b82f6' },
-  { id: 'reading', name: 'Reading', xp: 12, icon: '📚', color: '#6366f1' },
-  { id: 'meditation', name: 'Meditation', xp: 18, icon: '🧘‍♀️', color: '#14b8a6' },
-  { id: 'exercise', name: 'Exercise', xp: 22, icon: '💪', color: '#ec4899' },
-  { id: 'early_bedtime', name: 'Early Bedtime', xp: 12, icon: '😴', color: '#8b5cf6' },
-  { id: 'stretching', name: 'Stretching', xp: 10, icon: '🤸‍♀️', color: '#10b981' },
-  { id: 'journaling', name: 'Journaling', xp: 15, icon: '📝', color: '#f59e0b' },
-  { id: 'walking', name: 'Walking', xp: 18, icon: '🚶‍♀️', color: '#06b6d4' },
-  { id: 'gratitude', name: 'Gratitude Practice', xp: 8, icon: '🙏', color: '#fbbf24' },
-  { id: 'learning', name: 'Learn Something New', xp: 20, icon: '📚', color: '#6366f1' },
-  { id: 'music', name: 'Listen to Music', xp: 8, icon: '🎵', color: '#ec4899' },
-  { id: 'cleaning', name: 'Quick Tidy Up', xp: 10, icon: '🧹', color: '#64748b' },
+  { id: 'drink_water', name: 'Drink Water', xp: 5, icon: 'water', color: '#06b6d4' },
+  { id: 'breakfast', name: 'Breakfast', xp: 10, icon: 'food', color: '#f59e0b' },
+  { id: 'lunch', name: 'Lunch', xp: 15, icon: 'food', color: '#10b981' },
+  { id: 'dinner', name: 'Dinner', xp: 15, icon: 'food', color: '#ef4444' },
+  { id: 'take_break', name: 'Take Break', xp: 8, icon: 'coffee', color: '#8b5cf6' },
+  { id: 'run', name: 'Run', xp: 20, icon: 'run', color: '#f97316' },
+  { id: 'coding', name: 'Coding', xp: 25, icon: 'code', color: '#3b82f6' },
+  { id: 'reading', name: 'Reading', xp: 12, icon: 'book', color: '#6366f1' },
+  { id: 'meditation', name: 'Meditation', xp: 18, icon: 'meditation', color: '#14b8a6' },
+  { id: 'exercise', name: 'Exercise', xp: 22, icon: 'exercise', color: '#ec4899' },
+  { id: 'early_bedtime', name: 'Early Bedtime', xp: 12, icon: 'moon', color: '#8b5cf6' },
+  { id: 'stretching', name: 'Stretching', xp: 10, icon: 'stretch', color: '#10b981' },
+  { id: 'journaling', name: 'Journaling', xp: 15, icon: 'write', color: '#f59e0b' },
+  { id: 'walking', name: 'Walking', xp: 18, icon: 'walk', color: '#06b6d4' },
+  { id: 'gratitude', name: 'Gratitude Practice', xp: 8, icon: 'heart', color: '#fbbf24' },
+  { id: 'learning', name: 'Learn Something New', xp: 20, icon: 'learn', color: '#6366f1' },
+  { id: 'music', name: 'Listen to Music', xp: 8, icon: 'music', color: '#ec4899' },
+  { id: 'cleaning', name: 'Quick Tidy Up', xp: 10, icon: 'clean', color: '#64748b' },
 ];
 
-// --- MODAL COMPONENTS (Unchanged) ---
+// Navigation items (Unchanged)
+const navItems = [
+  { title: 'Daily Tasks', icon: 'list' },
+  { title: 'Levels', icon: 'trophy' },
+  { title: 'AI Assistant', icon: 'ai' },
+  { title: 'Challenges', icon: 'target' },
+  { title: 'Leaderboard', icon: 'leaderboard' },
+  { title: 'Calories', icon: 'flame' },
+  { title: 'Profile', icon: 'user' }
+];
+
+// --- MODAL COMPONENTS (Unchanged - Already good glassmorphism) ---
 
 const TaskModal = ({ isOpen, onClose, title, task, onSave, onTaskChange, isEdit = false }) => {
   if (!isOpen) return null;
-
+  // ... (Modal code is unchanged)
   const handleInputChange = (field, value) => {
     onTaskChange({ ...task, [field]: value });
   };
@@ -110,7 +148,7 @@ const TaskModal = ({ isOpen, onClose, title, task, onSave, onTaskChange, isEdit 
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText, icon }) => {
   if (!isOpen) return null;
-
+  // ... (Modal code is unchanged)
   return (
     <AnimatePresence>
       {isOpen && (
@@ -149,27 +187,26 @@ function Dashboard({ user, setUser, token, setToken }) {
   const [xpAnimations, setXpAnimations] = useState([]);
   const [tasks, setTasks] = useState(xpTasks);
 
-  // Modal States
+  // Modal States (Unchanged)
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showProgressResetModal, setShowProgressResetModal] = useState(false);
 
-  // --- Daily Progress States ---
-  // `dailyProgress` now tracks UNIQUE tasks completed today
+  // Daily Progress States (Unchanged)
   const [dailyProgress, setDailyProgress] = useState(0); 
-  // `taskXP` tracks completion count for EACH task today { taskId: count }
   const [taskXP, setTaskXP] = useState({}); 
-  // Cumulative progress across sessions
   const [overallTaskXP, setOverallTaskXP] = useState({});
   const [overallStats, setOverallStats] = useState({ totalCompletions: 0, uniqueTasks: 0 });
 
+  // Other States (Unchanged)
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [newTask, setNewTask] = useState({ name: '', xp: 10, icon: '⭐', color: '#60a5fa' });
   const [toast, setToast] = useState(null);
 
+  // Memos (Unchanged)
   const totalAvailableTasks = Math.max(tasks.length, 1);
   const overallCompletionPercent = useMemo(() => {
     const rawPercent = (overallStats.totalCompletions / totalAvailableTasks) * 100;
@@ -184,14 +221,12 @@ function Dashboard({ user, setUser, token, setToken }) {
     return axios(config);
   };
 
-  // --- Daily Progress Functions (UPDATED) ---
-
+  // --- Daily Progress Functions (Unchanged) ---
   const getTodayKey = () => {
     const today = new Date();
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
   };
 
-  // ** UPDATED load function **
   const loadDailyProgress = () => {
     try {
       const progressData = JSON.parse(localStorage.getItem('dailyTaskStatus') || '{}');
@@ -204,8 +239,7 @@ function Dashboard({ user, setUser, token, setToken }) {
       setDailyProgress(0);
     }
   };
-
-  // ** UPDATED save function (renamed) **
+  
   const saveDailyTaskStatus = (currentTaskXP) => {
     try {
       const progressData = {
@@ -240,22 +274,20 @@ function Dashboard({ user, setUser, token, setToken }) {
       console.error('Error saving overall task status:', error);
     }
   };
-
-  // ** REMOVED `updateDailyProgress` - logic moved to addXP **
-
-  // ** UPDATED reset function **
+  
   const resetDailyProgress = () => {
-    setTaskXP({}); // Reset task completion counts
-    setDailyProgress(0); // Reset unique count
-    saveDailyTaskStatus({}); // Save the empty state
+    setTaskXP({}); 
+    setDailyProgress(0); 
+    saveDailyTaskStatus({}); 
     setShowProgressResetModal(false);
     setToast({ message: 'Daily progress reset! Start fresh today! 🌟', type: 'success' });
     setTimeout(() => setToast(null), 3000);
   };
 
+  // --- useEffect (Unchanged) ---
   useEffect(() => {
     setProfile({ name: "Growth Seeker", email: "demo@example.com", photoURL: null });
-    loadDailyProgress(); // Load daily progress on component mount
+    loadDailyProgress(); 
     loadOverallProgress();
     if (user?._id && token) {
       makeAuthenticatedRequest('/users/profile-stats')
@@ -269,7 +301,6 @@ function Dashboard({ user, setUser, token, setToken }) {
         })
         .catch(error => {
           console.error('Error fetching user stats:', error);
-          // Fallback to localStorage user data if API fails
           const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
           setUserStats({
             level: storedUser.level || 1, xp: storedUser.xp || 0, streak: storedUser.streak || 0,
@@ -277,7 +308,6 @@ function Dashboard({ user, setUser, token, setToken }) {
           });
         });
     } else {
-        // Load from localStorage if offline/no token
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
         setUserStats({
             level: storedUser.level || 1, xp: storedUser.xp || 0, streak: storedUser.streak || 0,
@@ -286,7 +316,7 @@ function Dashboard({ user, setUser, token, setToken }) {
     }
   }, [user, token]); 
 
-  // ** UPDATED addXP function **
+  // --- addXP Function (Unchanged) ---
   const addXP = async (taskId, xpToAdd, clickPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 }) => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isOffline = !token || token.startsWith('offline_');
@@ -401,6 +431,7 @@ function Dashboard({ user, setUser, token, setToken }) {
     }
   };
 
+  // --- Task CRUD Functions (Unchanged) ---
   const openAddModal = () => {
     setNewTask({ name: '', xp: 10, icon: '⭐', color: '#60a5fa' });
     setShowAddModal(true);
@@ -413,7 +444,7 @@ function Dashboard({ user, setUser, token, setToken }) {
       return;
     }
     const task = { ...newTask, id: `custom_${Date.now()}` };
-    setTasks(prev => [task, ...prev]); // Add to the beginning
+    setTasks(prev => [task, ...prev]); 
     setShowAddModal(false);
     setToast({ message: `New task "${task.name}" added!`, type: 'success' });
     setTimeout(() => setToast(null), 3000);
@@ -436,21 +467,10 @@ function Dashboard({ user, setUser, token, setToken }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ** UPDATED resetAllTasks **
   const resetAllTasks = () => {
-    // Reset daily progress as well
     setTaskXP({});
     setDailyProgress(0); 
     saveDailyTaskStatus({}); 
-
-    // Reset overall stats (optional, depending on desired behavior)
-    // setUserStats(prev => ({ ...prev, tasksCompleted: 0, streak: 0 })); 
-    // if (user) {
-    //   const updatedUser = { ...user, tasksCompleted: 0, streak: 0 };
-    //   localStorage.setItem('user', JSON.stringify(updatedUser));
-    //   setUser(updatedUser);
-    // }
-    
     setShowResetModal(false);
     setToast({ message: 'Daily task counts reset! Ready for a fresh start! ✨', type: 'success' });
     setTimeout(() => setToast(null), 4000);
@@ -463,19 +483,17 @@ function Dashboard({ user, setUser, token, setToken }) {
 
   const deleteTask = () => {
     if (!taskToDelete) return;
-    const deletedTaskName = taskToDelete.name; // Store name for toast
+    const deletedTaskName = taskToDelete.name; 
 
     setTasks(prev => prev.filter(task => task.id !== taskToDelete.id));
     
-    // Also remove from today's progress if it was completed
     setTaskXP(prev => {
       const newTaskXP = { ...prev };
       if (newTaskXP[taskToDelete.id]) {
-          delete newTaskXP[taskToDelete.id];
-          // Recalculate unique count after deletion
-          const uniqueCount = Object.keys(newTaskXP).length;
-          setDailyProgress(uniqueCount); 
-          saveDailyTaskStatus(newTaskXP); // Save updated status
+        delete newTaskXP[taskToDelete.id];
+        const uniqueCount = Object.keys(newTaskXP).length;
+        setDailyProgress(uniqueCount); 
+        saveDailyTaskStatus(newTaskXP); 
       }
       return newTaskXP;
     });
@@ -486,11 +504,23 @@ function Dashboard({ user, setUser, token, setToken }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // --- Animation Config (Unchanged) ---
   const sectionAnimation = {
     initial: { opacity: 0, x: 50 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -50 },
     transition: { duration: 0.4, ease: "easeInOut" }
+  };
+
+  // --- GLASSMORPHIC STYLES ---
+  // Define the core glass style here to reuse
+  const glassmorphicStyle = {
+    background: "rgba(255, 255, 255, 0.1)",
+    backdropFilter: "blur(20px) saturate(180%)",
+    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+    border: "1px solid rgba(255, 255, 255, 0.18)",
+    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.2)",
+    color: theme.textPrimary, // Ensure text is readable
   };
 
   return (
@@ -508,47 +538,55 @@ function Dashboard({ user, setUser, token, setToken }) {
         <div style={{ position: "absolute", top: "10%", left: "5%", width: "300px", height: "300px", background: `radial-gradient(circle, ${theme.accent}10 0%, transparent 70%)`, borderRadius: "50%", animation: "float 20s ease-in-out infinite" }} />
         <div style={{ position: "absolute", top: "60%", right: "8%", width: "200px", height: "200px", background: `radial-gradient(circle, ${theme.accentSecondary}10 0%, transparent 70%)`, borderRadius: "50%", animation: "float 25s ease-in-out infinite reverse" }} />
 
-        {/* Header Navigation */}
+        {/* Header Navigation (STYLES UPDATED) */}
         <motion.div
           initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
           style={{
+            ...glassmorphicStyle, // Apply base glass style
             position: "sticky",
             top: 16,
             zIndex: 100,
             width: "min(92%, 1100px)",
             margin: "0 auto",
             padding: "18px clamp(20px, 5vw, 40px)",
-            background: theme.navBg,
-            backdropFilter: "blur(24px) saturate(170%)",
-            WebkitBackdropFilter: "blur(24px) saturate(170%)",
             borderRadius: "26px",
-            border: `1px solid ${theme.border}`,
-            boxShadow: `0 18px 48px ${theme.shadow}`,
             backgroundClip: "padding-box",
+            // Override/add specific styles
+            boxShadow: "0 18px 48px rgba(0, 0, 0, 0.25)",
+            border: `1px solid rgba(255, 255, 255, 0.1)`,
           }}
         >
-
           <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 40px", display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap" }}>
             {[
               { title: 'Daily Tasks', icon: '📋' }, { title: 'Levels', icon: '🏆' }, { title: 'AI Assistant', icon: '🤖' },
               { title: 'Challenges', icon: '🎮' }, { title: 'Leaderboard', icon: '👑' }, { title: 'Calories', icon: '🔥' }, { title: 'Profile', icon: '👤' }
             ].map((section, index) => {
               const isActive = activeSection === index;
-              const activeGradient = 'linear-gradient(135deg, #facc15, #f97316)';
-              const hoverGradient = isActive
-                ? 'linear-gradient(135deg, #fde68a, #fbbf24)'
-                : 'linear-gradient(135deg, rgba(250, 204, 21, 0.25), rgba(253, 224, 71, 0.1))';
+              
+              // STYLES UPDATED for buttons
+              const activeStyle = {
+                background: 'linear-gradient(135deg, #facc15, #f97316)',
+                color: '#1f2937',
+                boxShadow: '0 12px 30px rgba(250, 204, 21, 0.35)',
+                border: '1px solid rgba(250, 204, 21, 0.65)',
+              };
+              
+              const inactiveStyle = {
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: theme.textSecondary,
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 6px 18px rgba(15, 23, 42, 0.35)',
+              };
+
               return (
                 <motion.button
                   key={section.title}
                   whileHover={{
                     scale: 1.08,
                     y: -4,
-                    boxShadow: isActive
-                      ? '0 14px 32px rgba(250, 204, 21, 0.45)'
-                      : '0 12px 28px rgba(250, 204, 21, 0.25)',
-                    background: hoverGradient,
-                    color: '#1f2937'
+                    boxShadow: isActive ? '0 14px 32px rgba(250, 204, 21, 0.45)' : '0 12px 28px rgba(255, 255, 255, 0.15)',
+                    background: isActive ? 'linear-gradient(135deg, #fde68a, #fbbf24)' : 'rgba(255, 255, 255, 0.15)',
+                    color: isActive ? '#1f2937' : theme.textPrimary, // Brighter text on hover
                   }}
                   whileTap={{ scale: 0.94 }}
                   animate={isActive ? {
@@ -563,17 +601,14 @@ function Dashboard({ user, setUser, token, setToken }) {
                   style={{
                     padding: "12px 24px",
                     borderRadius: "15px",
-                    border: isActive ? '1px solid rgba(250, 204, 21, 0.65)' : '1px solid rgba(250, 204, 21, 0.25)',
-                    background: isActive ? activeGradient : 'rgba(250, 204, 21, 0.12)',
-                    color: isActive ? '#1f2937' : theme.textSecondary,
                     fontWeight: "600",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                     transition: "all 0.35s ease",
-                    boxShadow: isActive ? '0 12px 30px rgba(250, 204, 21, 0.35)' : '0 6px 18px rgba(15, 23, 42, 0.35)',
-                    backgroundSize: '200% 200%'
+                    backgroundSize: '200% 200%',
+                    ...(isActive ? activeStyle : inactiveStyle) // Apply dynamic styles
                   }}
                 >
                   <motion.span
@@ -598,93 +633,190 @@ function Dashboard({ user, setUser, token, setToken }) {
                 {activeSection === 0 && (
                   <motion.div key={0} {...sectionAnimation}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "30px", width: '100%' }}>
-                      {/* Section Header */}
-                      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: theme.cardBg, backdropFilter: "blur(20px) saturate(180%)", borderRadius: "25px", padding: "25px 30px", border: `1px solid ${theme.border}` }}>
+                      
+                      {/* Section Header (STYLES UPDATED) */}
+                      <motion.div 
+                        initial={{ opacity: 0, y: -20 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        transition={{ duration: 0.6 }} 
+                        style={{ 
+                          ...glassmorphicStyle, // Apply base glass style
+                          display: "flex", 
+                          justifyContent: "space-between", 
+                          alignItems: "center", 
+                          borderRadius: "25px", 
+                          padding: "25px 30px", 
+                        }}
+                      >
                         <div>
                           <h2 style={{ fontSize: "1.8rem", fontWeight: "700", margin: 0, background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentSecondary})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Daily Tasks</h2>
-                          {/* UPDATED Text */}
                           <p style={{ fontSize: "1rem", color: theme.textSecondary, margin: "8px 0 0" }}>{tasks.length} tasks available • {dailyProgress} unique completed today</p>
                         </div>
                         <div style={{ display: "flex", gap: "15px" }}>
-                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowResetModal(true)} style={{ padding: "12px 20px", borderRadius: "15px", border: "none", background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#fff", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><span>🔄</span> Reset Daily</motion.button>
-                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={openAddModal} style={{ padding: "12px 20px", borderRadius: "15px", border: "none", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "#fff", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}><span>➕</span> Add Task</motion.button>
+                          {/* Reset Button (STYLES UPDATED) */}
+                          <motion.button 
+                            whileHover={{ scale: 1.05, boxShadow: '0 8px 25px rgba(239, 68, 68, 0.4)' }} 
+                            whileTap={{ scale: 0.95 }} 
+                            onClick={() => setShowResetModal(true)} 
+                            style={{ 
+                              padding: "12px 20px", 
+                              borderRadius: "15px", 
+                              border: "1px solid rgba(239, 68, 68, 0.5)", 
+                              background: "rgba(239, 68, 68, 0.2)", // Glassy Red
+                              backdropFilter: "blur(10px)",
+                              color: "#fff", 
+                              fontWeight: "600", 
+                              cursor: "pointer", 
+                              display: "flex", 
+                              alignItems: "center", 
+                              gap: "8px" 
+                            }}
+                          >
+                            <span>🔄</span> Reset Daily
+                          </motion.button>
+                          {/* Add Task Button (STYLES UPDATED) */}
+                          <motion.button 
+                            whileHover={{ scale: 1.05, boxShadow: '0 8px 25px rgba(34, 197, 94, 0.4)' }} 
+                            whileTap={{ scale: 0.95 }} 
+                            onClick={openAddModal} 
+                            style={{ 
+                              padding: "12px 20px", 
+                              borderRadius: "15px", 
+                              border: "1px solid rgba(34, 197, 94, 0.5)", 
+                              background: "rgba(34, 197, 94, 0.2)", // Glassy Green
+                              backdropFilter: "blur(10px)",
+                              color: "#fff", 
+                              fontWeight: "600", 
+                              cursor: "pointer", 
+                              display: "flex", 
+                              alignItems: "center", 
+                              gap: "8px" 
+                            }}
+                          >
+                            <span>➕</span> Add Task
+                          </motion.button>
                         </div>
                       </motion.div>
                       
-                      {/* Daily Progress Card (UPDATED) */}
-                      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} style={{ background: "rgba(59, 130, 246, 0.1)", backdropFilter: "blur(20px) saturate(180%)", borderRadius: "20px", padding: "25px", border: "1px solid rgba(59, 130, 246, 0.2)", boxShadow: "0 8px 32px rgba(59, 130, 246, 0.1)" }}>
+                      {/* Daily Progress Card (STYLES UPDATED) */}
+                      <motion.div 
+                        initial={{ opacity: 0, y: -20 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        transition={{ duration: 0.6, delay: 0.1 }} 
+                        style={{ 
+                          ...glassmorphicStyle, // Apply base glass style
+                          borderRadius: "20px", 
+                          padding: "25px", 
+                          // Override border/bg for a neutral look
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)" 
+                        }}
+                      >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <span style={{ fontSize: "1.5rem" }}>📊</span>
-                            <h3 style={{ fontSize: "1.3rem", fontWeight: "700", margin: 0, color: "#3b82f6" }}>Daily Progress</h3>
+                            <h3 style={{ fontSize: "1.3rem", fontWeight: "700", margin: 0, color: theme.textPrimary }}>Daily Progress</h3>
                           </div>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowProgressResetModal(true)} style={{ padding: "8px 16px", borderRadius: "12px", border: "1px solid rgba(239, 68, 68, 0.3)", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", fontWeight: "600", cursor: "pointer", fontSize: "0.85rem" }}>🔄 Reset</motion.button>
                         </div>
 
-                        {/* Stats Cards Row (UPDATED) */}
+                        {/* Stats Cards Row (STYLES UPDATED) */}
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "20px" }}>
+                          
                           {/* Daily Tasks Progress */}
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                            style={{ background: "rgba(139, 92, 246, 0.1)", borderRadius: "15px", padding: "15px", border: "1px solid rgba(139, 92, 246, 0.2)", textAlign: "center" }}
+                            style={{ 
+                              background: "rgba(139, 92, 246, 0.15)", // Keep color tint
+                              backdropFilter: "blur(10px)",
+                              borderRadius: "15px", 
+                              padding: "15px", 
+                              border: "1px solid rgba(139, 92, 246, 0.25)", 
+                              textAlign: "center" 
+                            }}
                             key={`unique-progress-${dailyProgress}-${tasks.length}`}
                           >
-                            <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📋</div>
-                            <h4 style={{ fontSize: "0.9rem", color: "#9ca3af", margin: "0 0 5px 0", fontWeight: "600" }}>Unique Tasks Done</h4>
+                            <GlassIcon icon="list" color="#8b5cf6" size="md" />
+                            <h4 style={{ fontSize: "0.9rem", color: theme.textSecondary, margin: "0 0 5px 0", fontWeight: "600" }}>Unique Tasks Done</h4>
                             <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#8b5cf6" }}>
                               {dailyProgress}/{Math.max(tasks.length, 1)} 
                             </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "5px" }}>
+                            <div style={{ fontSize: "0.8rem", color: theme.textSecondary, marginTop: "5px" }}>
                               {Math.round((dailyProgress / Math.max(tasks.length, 1)) * 100)}% Complete
                             </div>
                           </motion.div>
 
-                          {/* Total XP Gained Today (Logic Unchanged, uses taskXP) */}
+                          {/* Total XP Gained Today */}
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-                            style={{ background: "rgba(251, 191, 36, 0.1)", borderRadius: "15px", padding: "15px", border: "1px solid rgba(251, 191, 36, 0.2)", textAlign: "center" }}
+                            style={{ 
+                              background: "rgba(251, 191, 36, 0.15)", // Keep color tint
+                              backdropFilter: "blur(10px)",
+                              borderRadius: "15px", 
+                              padding: "15px", 
+                              border: "1px solid rgba(251, 191, 36, 0.25)", 
+                              textAlign: "center" 
+                            }}
                             key={`xp-gained-${Object.values(taskXP).reduce((sum, count) => sum + count, 0)}`}
                           >
-                            <div style={{ fontSize: "2rem", marginBottom: "8px" }}>⭐</div>
-                            <h4 style={{ fontSize: "0.9rem", color: "#9ca3af", margin: "0 0 5px 0", fontWeight: "600" }}>XP Gained Today</h4>
+                            <GlassIcon icon="star" color="#fbbf24" size="md" />
+                            <h4 style={{ fontSize: "0.9rem", color: theme.textSecondary, margin: "0 0 5px 0", fontWeight: "600" }}>XP Gained Today</h4>
                             <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#fbbf24" }}>
                               {Object.entries(taskXP).reduce((sum, [taskId, count]) => {
                                 const task = tasks.find(t => t.id === taskId);
-                                return sum + (count * (task?.xp || 0)); // Safely access xp
+                                return sum + (count * (task?.xp || 0)); 
                               }, 0)}
                             </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "5px" }}>
+                            <div style={{ fontSize: "0.8rem", color: theme.textSecondary, marginTop: "5px" }}>
                               From {Object.values(taskXP).reduce((sum, count) => sum + count, 0)} completions
                             </div>
                           </motion.div>
 
-                          {/* Current Level Progress (Uses userStats from parent) */}
+                          {/* Current Level Progress */}
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
-                            style={{ background: "rgba(16, 185, 129, 0.1)", borderRadius: "15px", padding: "15px", border: "1px solid rgba(16, 185, 129, 0.2)", textAlign: "center" }}
+                            style={{ 
+                              background: "rgba(16, 185, 129, 0.15)", // Keep color tint
+                              backdropFilter: "blur(10px)",
+                              borderRadius: "15px", 
+                              padding: "15px", 
+                              border: "1px solid rgba(16, 185, 129, 0.25)", 
+                              textAlign: "center" 
+                            }}
                             key={`level-${userStats.level}-${userStats.xp}`}
                           >
-                            <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🏆</div>
-                            <h4 style={{ fontSize: "0.9rem", color: "#9ca3af", margin: "0 0 5px 0", fontWeight: "600" }}>Current Level</h4>
+                            <GlassIcon icon="trophy" color="#10b981" size="md" />
+                            <h4 style={{ fontSize: "0.9rem", color: theme.textSecondary, margin: "0 0 5px 0", fontWeight: "600" }}>Current Level</h4>
                             <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#10b981" }}>
-                               Level {userStats.level}
+                                Level {userStats.level}
                             </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "5px" }}>
-                               {userStats.xp} / {userStats.level * 100} XP {/* Assuming 100 XP per level */}
+                            <div style={{ fontSize: "0.8rem", color: theme.textSecondary, marginTop: "5px" }}>
+                                {userStats.xp} / {userStats.level * 100} XP 
                             </div>
                           </motion.div>
                         </div>
 
-                        {/* Overall Progress */}
+                        {/* Overall Progress (STYLES UPDATED) */}
                         <div style={{ marginBottom: "20px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", width: "100%" }}>
-                            <span style={{ fontSize: "0.9rem", color: "#9ca3af", fontWeight: "600" }}>Overall Task Progress</span>
-                            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                            <span style={{ fontSize: "0.9rem", color: theme.textSecondary, fontWeight: "600" }}>Overall Task Progress</span>
+                            <span style={{ fontSize: "0.8rem", color: theme.textSecondary }}>
                               {overallStats.totalCompletions} total completions • {overallStats.uniqueTasks} unique tasks explored
                             </span>
                           </div>
-
-                          <div style={{ position: "relative", height: "32px", background: "linear-gradient(135deg, rgba(55, 65, 81, 0.8), rgba(31, 41, 55, 0.9))", borderRadius: "16px", overflow: "hidden", boxShadow: "inset 0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(59, 130, 246, 0.15)", border: "2px solid rgba(59, 130, 246, 0.3)", width: "100%" }}>
+                          
+                          {/* Progress Bar Container (STYLES UPDATED) */}
+                          <div style={{ 
+                            position: "relative", 
+                            height: "32px", 
+                            background: "rgba(0, 0, 0, 0.25)", // Darker glass base
+                            borderRadius: "16px", 
+                            overflow: "hidden", 
+                            boxShadow: "inset 0 2px 8px rgba(0, 0, 0, 0.2)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            width: "100%" 
+                          }}>
                             <div
                               style={{
                                 position: "absolute",
@@ -716,7 +848,10 @@ function Dashboard({ user, setUser, token, setToken }) {
                           </div>
 
                           {dailyProgress >= tasks.length && (
-                            <div style={{ marginTop: "10px", textAlign: "center", fontSize: "1.5rem" }}>🎉✨</div>
+                            <div style={{ marginTop: "10px", textAlign: "center" }}>
+                              <GlassIcon icon="celebration" color="#f59e0b" size="sm" style={{ display: 'inline-block', margin: '0 5px' }} />
+                              <GlassIcon icon="sparkles" color="#ec4899" size="sm" style={{ display: 'inline-block', margin: '0 5px' }} />
+                            </div>
                           )}
 
                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "12px", width: "100%" }}>
@@ -738,19 +873,24 @@ function Dashboard({ user, setUser, token, setToken }) {
                           </div>
                         </div>
 
-                        {/* Motivational Message (UPDATED - uses dailyProgress) */}
+                        {/* Motivational Message (STYLES UPDATED) */}
                         <motion.div
-                          key={`motivation-${dailyProgress}`} // Key updates when dailyProgress changes
+                          key={`motivation-${dailyProgress}`} 
                           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
                           style={{
-                            fontSize: "0.85rem", color: "#64748b", textAlign: "center", padding: "12px",
-                            background: dailyProgress >= tasks.length ? "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))" : "rgba(255, 255, 255, 0.05)",
+                            fontSize: "0.85rem", color: theme.textSecondary, textAlign: "center", padding: "12px",
+                            background: dailyProgress >= tasks.length 
+                              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15))" 
+                              : "rgba(255, 255, 255, 0.05)", // Neutral glass
+                            backdropFilter: "blur(5px)",
                             borderRadius: "12px",
-                            border: dailyProgress >= tasks.length ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)"
+                            border: dailyProgress >= tasks.length 
+                              ? "1px solid rgba(16, 185, 129, 0.3)" 
+                              : "1px solid rgba(255, 255, 255, 0.1)"
                           }}
                         >
                           {(() => {
-                            const uniqueTasksCompleted = dailyProgress; // Use state directly
+                            const uniqueTasksCompleted = dailyProgress; 
                             const allTasksCompleted = uniqueTasksCompleted >= tasks.length;
 
                             if (uniqueTasksCompleted === 0) {
@@ -772,7 +912,7 @@ function Dashboard({ user, setUser, token, setToken }) {
                         </motion.div>
                       </motion.div>
 
-                      {/* Task Grid (Unchanged) */}
+                      {/* Task Grid (STYLES UPDATED) */}
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "25px", width: "100%" }}>
                         <AnimatePresence>
                           {tasks.map((task, index) => (
@@ -785,9 +925,19 @@ function Dashboard({ user, setUser, token, setToken }) {
                               transition={{ duration: 0.4, delay: index * 0.03, ease: "easeOut" }}
                               whileHover={{ scale: 1.02, y: -8, boxShadow: `0 15px 40px ${task.color}20` }}
                               style={{
-                                background: theme.cardBg, backdropFilter: "blur(20px)", borderRadius: "25px",
-                                padding: "25px", border: `2px solid ${task.color}25`, textAlign: "center",
-                                position: "relative", overflow: "hidden", cursor: "pointer"
+                                // Use the glassmorphic style from the progress card, but keep task-specific border
+                                background: "rgba(255, 255, 255, 0.05)",
+                                backdropFilter: "blur(20px) saturate(180%)",
+                                WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                                border: `1px solid ${task.color}40`, // Use task color for border
+                                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+                                borderRadius: "25px",
+                                padding: "25px", 
+                                textAlign: "center",
+                                position: "relative", 
+                                overflow: "hidden", 
+                                cursor: "pointer",
+                                color: theme.textPrimary,
                               }}
                               onClick={(event) => {
                                 const bounds = event.currentTarget.getBoundingClientRect();
@@ -800,8 +950,8 @@ function Dashboard({ user, setUser, token, setToken }) {
                                 addXP(task.id, task.xp, clickPosition);
                               }}
                             >
-                              <div style={{ fontSize: "3rem", marginBottom: "20px" }}>{task.icon}</div>
-                              <div style={{ fontSize: "1.2rem", fontWeight: "700", color: task.color, marginBottom: "12px" }}>{task.name}</div>
+                              <GlassIcon icon={task.icon} color={task.color} size="lg" />
+                              <div style={{ fontSize: "1.2rem", fontWeight: "700", color: task.color, marginBottom: "12px", marginTop: "10px" }}>{task.name}</div>
                               <div style={{ background: `linear-gradient(135deg, ${task.color}, ${task.color}cc)`, padding: "8px 16px", borderRadius: "20px", fontSize: "0.9rem", fontWeight: "800", color: "#fff", display: "inline-block", marginBottom: "20px" }}>+{task.xp} XP</div>
                               {taskXP[task.id] > 0 && (
                                 <motion.div
@@ -825,14 +975,14 @@ function Dashboard({ user, setUser, token, setToken }) {
                     </div>
                   </motion.div>
                 )}
-                {/* Other Sections (Passing updated userStats to LevelRoadmap) */}
+                {/* Other Sections (Unchanged) */}
                 {activeSection === 1 && (
                   <motion.div key={1} {...sectionAnimation}>
                       <LevelRoadmap 
-                          level={userStats.level} 
-                          xp={userStats.xp} 
-                          triggerAnimation={roadmapAnimation} 
-                      />
+                        level={userStats.level} 
+                        xp={userStats.xp} 
+                        triggerAnimation={roadmapAnimation} 
+                    />
                   </motion.div>
                 )}
                 {activeSection === 2 && (<motion.div key={2} {...sectionAnimation}><AIAssistant /></motion.div>)}
@@ -866,7 +1016,13 @@ function Dashboard({ user, setUser, token, setToken }) {
           {toast && (
             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
               style={{ position: "fixed", bottom: "30px", left: "50%", transform: "translateX(-50%)", padding: "16px 30px", borderRadius: "15px", zIndex: 1001, background: toast.type === 'error' ? "linear-gradient(135deg, #ef4444, #dc2626)" : "linear-gradient(135deg, #10b981, #059669)", color: "#fff", fontWeight: "600" }}>
-              <span>{toast.type === 'error' ? '❌' : '✅'}</span> {toast.message}
+              <GlassIcon 
+                icon={toast.type === 'error' ? 'error' : 'success'} 
+                size="sm" 
+                color={toast.type === 'error' ? '#ef4444' : '#10b981'} 
+                style={{ marginRight: '10px' }} 
+              />
+              {toast.message}
             </motion.div>
           )}
         </AnimatePresence>

@@ -202,7 +202,7 @@ const GuidancePanel = () => {
       style={styles.panel}
     >
       <div style={styles.panelHeader}>
-        <span style={styles.panelIcon}></span>
+        <span style={styles.panelIcon}>💡</span>
         <h2 style={styles.panelTitle}>Expert Guidance</h2>
       </div>
       <div style={styles.panelContent}>
@@ -247,7 +247,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "👋 Hi! I'm your AI Growth Assistant. Ask me anything about:\n\n• Building better habits\n• Productivity tips\n• Goal setting strategies\n• Time management\n• Personal development\n• Motivation and mindset\n\nWhat would you like to know?"
+      content: "👋 Hi! I'm AURA, your AI Growth Coach. Ask me anything about building better habits, productivity, or health. What's on your mind?"
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -257,6 +257,9 @@ export default function AIAssistant() {
   const [newGoal, setNewGoal] = useState('');
   const [goalCategory, setGoalCategory] = useState('health');
   const [modalInputRef, setModalInputRef] = useState(null);
+
+  // --- 🧠 NEW: CONVERSATION MEMORY STATE ---
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   const chatEndRef = useRef(null);
 
@@ -284,6 +287,22 @@ export default function AIAssistant() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // --- 🧠 NEW: LOAD & SAVE MEMORY ---
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('aura-conversation-history');
+    if (savedHistory) {
+      setConversationHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('aura-conversation-history', JSON.stringify(conversationHistory.slice(-5)));
+  }, [conversationHistory]);
+  // --- END OF NEW MEMORY LOGIC ---
+
+  // =================================================================
+  // === NEW `handleSubmit` (with Memory & Better Filters) ===
+  // =================================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmedPrompt = prompt.trim();
@@ -294,6 +313,86 @@ export default function AIAssistant() {
       return;
     }
 
+    // ✅ SMART GUARDRAIL v2 — Broader Health & Fitness Understanding
+    const growthKeywords = [
+      // General growth and mindset
+      'growth', 'habit', 'motivat', 'discipline', 'focus', 'goal', 'routine',
+      'mindset', 'self improve', 'consistency', 'progress', 'success', 'reflection',
+      'time management', 'energy', 'mental', 'confidence', 'productiv', 'mindfulness',
+      'stress', 'peace', 'relax', 'calm', 'focus', 'study', 'learn better',
+
+      // Health & fitness core
+      'health', 'fit', 'fitness', 'gym', 'workout', 'train', 'training', 'exercise',
+      'cardio', 'weight', 'muscle', 'strength', 'flexibility', 'stretch', 'recovery',
+      'lose', 'loss', 'gain', 'burn', 'reduce', 'tone', 'cut', 'bulk', 'body fat', 'fat',
+      'shape', 'physique', 'endurance', 'stamina', 'running', 'jogging', 'walking',
+
+      // Food, nutrition, and diet
+      'nutrition', 'food', 'diet', 'meal', 'plan', 'protein', 'calories', 'deficit',
+      'carbs', 'fats', 'fiber', 'water', 'hydration', 'sleep', 'rest', 'eating',
+      'metabolism', 'healthy', 'cook', 'snack', 'hydrating',
+
+      // Recovery and wellness
+      'yoga', 'meditation', 'mindful', 'breathe', 'wellness', 'balance', 'rest day',
+
+      // General
+      'how are you', 'hi', 'hello' // Greetings
+    ];
+
+    const bannedKeywords = [
+      // Tech
+      'python', 'java', 'javascript', 'c++', 'coding', 'programming', 'html', 'css',
+      'react', 'node', 'api', 'database', 'project', 'git', 'terminal', 'command',
+      'machine learning', 'data science', 'algorithm', 'ai model',
+
+      // Entertainment / others
+      'movie', 'film', 'actor', 'actress', 'series', 'music', 'song', 'game', 'gaming',
+      'celebrity', 'politics', 'history', 'war', 'country', 'sports', 'team',
+      'math', 'physics', 'chemistry', 'exam', 'formula'
+    ];
+
+    const promptLower = trimmedPrompt.toLowerCase();
+    
+    // ✅ New pattern-based matching for natural language
+    const isActionBasedFitnessQuery = /(lose|reduce|burn|gain|tone|build|cut|drop|increase|improve|boost|develop)\s?(fat|weight|muscle|stamina|strength|fitness|focus|discipline|productivity)/i.test(promptLower);
+
+    // Check if it's a greeting first
+    const isGreeting = ['how are you', 'hi', 'hello'].some(keyword => promptLower.includes(keyword));
+    const isGrowthRelated = growthKeywords.some(keyword => promptLower.includes(keyword)) || isActionBasedFitnessQuery;
+    const isBanned = bannedKeywords.some(keyword => promptLower.includes(keyword));
+
+    // Allow greetings, but block banned keywords even if they are mixed with growth keywords
+    if (isBanned) {
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', content: trimmedPrompt },
+        { role: 'assistant', content: "⚠️ Sorry! I can only help you with health, fitness, productivity, and personal growth — not coding or movies. 🌱" },
+      ]);
+      setPrompt('');
+      return;
+    }
+
+    // If it's not a greeting and not growth-related, check for health/fitness related questions
+    if (!isGrowthRelated && !isGreeting) {
+      // Check if it's a health/fitness question that wasn't caught by the keyword filter
+      const isHealthQuestion = /(lose weight|weight loss|burn fat|how to slim|how to get fit|healthy diet|exercise routine)/i.test(trimmedPrompt);
+      
+      if (isHealthQuestion) {
+        // If it's a health question that wasn't caught by keywords, let it through
+        console.log('Health-related question detected:', trimmedPrompt);
+      } else {
+        // If it's truly unrelated, show the error message
+        setMessages(prev => [
+          ...prev,
+          { role: 'user', content: trimmedPrompt },
+          { role: 'assistant', content: "🤔 I'm here to help with health, fitness, personal growth, and productivity. Could you rephrase your question to be more specific about your goals?" },
+        ]);
+        setPrompt('');
+        return;
+      }
+    }
+
+    // --- Passed filters, now proceed ---
     const userMessage = { role: 'user', content: trimmedPrompt };
     setMessages(prev => [...prev, userMessage]);
     setPrompt('');
@@ -301,30 +400,143 @@ export default function AIAssistant() {
     setError(null);
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
     if (!apiKey) {
-      setError(' API Key not configured. Please add VITE_GEMINI_API_KEY to your .env file');
+      setError('⚠️ Missing API Key. Add VITE_GEMINI_API_KEY to your .env file.');
       setIsLoading(false);
       return;
     }
 
+    // --- 🧠 NEW: Build context with MEMORY ---
+    const completedGoalsCount = goals.filter(g => g.completed).length;
+    const totalGoalsCount = goals.length;
+    const pendingGoals = goals.filter(g => !g.completed);
+
+    // Save user message in memory
+    setConversationHistory(prev => {
+      const updated = [...prev, trimmedPrompt];
+      return updated.slice(-5); // Keep only the last 5
+    });
+
+    const memorySummary =
+      conversationHistory.length > 0
+        ? conversationHistory.map((msg, i) => `(${i + 1}) ${msg}`).join('\n')
+        : 'No prior questions yet. This is the start of the journey.';
+    // --- End of memory logic ---
+
+    // --- This is the 429 Error Fix (Goal Summaries) ---
+    const categoryCounts = pendingGoals.reduce((acc, goal) => {
+      acc[goal.category] = (acc[goal.category] || 0) + 1;
+      return acc;
+    }, {});
+
+    const goalsSummary = totalGoalsCount
+      ? `Goals set: ${totalGoalsCount}, Completed: ${completedGoalsCount}, Pending: ${pendingGoals.length}`
+      : 'No goals set yet.';
+    const categorySummary =
+      pendingGoals.length > 0
+        ? `Pending goals by category: ${Object.entries(categoryCounts)
+            .map(([cat, count]) => `${cat} (${count})`)
+            .join(', ')}`
+        : 'No pending goals right now — great job!';
+
+    const moodPrompt =
+      totalGoalsCount === 0
+        ? 'Encourage them to set new goals.'
+        : completedGoalsCount === 0
+        ? 'Be uplifting — the user is starting out.'
+        : completedGoalsCount / totalGoalsCount < 0.5
+        ? 'Be motivating — help them stay consistent.'
+        : 'Celebrate progress — inspire continued success.';
+    
+    // --- End of context building ---
+
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
+    // --- 🧠 NEW: Upgraded Payload with Memory ---
     const payload = {
-      contents: [{
-        parts: [{
-          text: `You are a helpful and motivating AI Growth Assistant for a daily growth tracking app.
-You are helping a user who is tracking their calories, tasks, and goals.
-Answer questions about personal development, productivity, habits, goal setting, gym workouts, yoga, running, and nutrition.
-Keep responses clear, actionable, and encouraging. Use emojis to make it friendly.
-User question: ${trimmedPrompt}`
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1000,
-      }
+      contents: [
+        {
+          parts: [
+            {
+              text: `You are **AURA**, the user's Personal AI Growth Coach integrated into the Daily Growth Tracker App.  
+Your mission is to guide the user in *fitness, health, nutrition, mindfulness, productivity, and personal growth* — like a wise, friendly mentor and trainer combined.  
+
+---
+
+### 🧩 YOUR ROLE
+You are a compassionate, knowledgeable coach who helps the user:
+- Lose fat safely
+- Build muscle naturally
+- Improve focus, motivation, and consistency
+- Design workouts, daily routines, and balanced meals
+- Build sustainable discipline and a positive mindset
+
+You are **NOT** a generic chatbot. You are the user's *long-term growth partner*.
+
+---
+
+### ⚙️ RULES & BEHAVIOR
+1. **ONLY** respond to questions about:
+   - Health, fitness, food, habits, mindset, productivity, recovery, motivation, yoga, or mindfulness.
+2. **NEVER** answer unrelated topics (coding, history, politics, movies, AI models, etc.).
+3. Keep advice *realistic and beginner-safe*. Avoid extreme diets or medical recommendations.
+4. Include motivational tone and emojis like 💪🥗🔥🧘🌿.
+5. Structure answers clearly — use bullet points, sections, or 7-day/3-day templates if needed.
+6. Personalize responses using the user's goals, progress, and memory.
+7. If the user mentions *weight loss, muscle gain, or routine building*, generate detailed structured plans (like meal plans, workouts, or checklists).
+8. Encourage tracking progress inside the Daily Growth Tracker app.
+9. NEVER start every reply the same way — vary your tone naturally.
+10. If unsure, gently ask clarifying questions like a real coach would.
+
+---
+
+### 🧘‍♂️ CONTEXT DATA
+User's current goals:
+${goalsSummary}
+${categorySummary}
+
+Recent conversation history (last 5 messages):
+${memorySummary}
+
+Mood context:
+${moodPrompt}
+
+---
+
+### 🧭 RESPONSE EXAMPLES:
+If the user says:
+> "I want to lose 3 kg of fat."
+
+Respond like:
+> "🔥 Great goal! Here's a 7-day fat-loss starter plan:  
+> 🥗 **Nutrition:** 400-calorie deficit daily (focus on eggs, dal, lean meats, veggies).  
+> 🏋️‍♂️ **Workout:** 4 days strength + 2 days cardio (walking, cycling, or HIIT).  
+> 💧 **Hydration:** 3L/day.  
+> 💤 **Sleep:** 7–8 hours.  
+> Track your meals and habits daily — small wins add up!"
+
+If the user says:
+> "How can I improve focus and motivation?"
+
+Respond like:
+> "🎯 Focus = mental fitness. Try:  
+> 1. 25-min deep work sessions (Pomodoro).  
+> 2. Journal 3 wins each day.  
+> 3. Morning light walk ☀️  
+> 4. One micro goal per day.  
+> You'll feel momentum build within a week!"
+
+---
+
+### USER'S QUESTION:
+"${trimmedPrompt}"`,
+            },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
     };
+    // --- END OF PAYLOAD ---
 
     try {
       const res = await fetch(apiUrl, {
@@ -334,25 +546,32 @@ User question: ${trimmedPrompt}`
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `API Error: ${res.status}`);
+        if (res.status === 429) {
+           setError('⚠️ Too many requests. Try again soon.');
+           setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry! I\'m a bit busy. Please try again later.' }]);
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `API Error: ${res.status}`);
+        }
+        return; // Stop execution if there was a non-critical error like 429
       }
 
       const data = await res.json();
       const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-      
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+
     } catch (err) {
       console.error('AI Error:', err);
-      setError(`❌ ${err.message || 'Failed to get AI response. Please try again.'}`);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: ' Sorry, I encountered an error. Please try asking your question again!'
-      }]);
+      setError(`❌ ${err.message || 'Failed to get AI response.'}`);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry! An error occurred. Please try again.' }]);
     } finally {
       setIsLoading(false);
     }
   };
+  // =================================================================
+  // === END OF UPDATED FUNCTION ===
+  // =================================================================
+
 
   const handleAddGoal = () => {
     if (newGoal.trim()) {
@@ -368,7 +587,6 @@ User question: ${trimmedPrompt}`
       setNewGoal('');
       setShowGoalModal(false);
       setGoalCategory('health');
-      // Show success message
       console.log('Goal added successfully:', goal);
     } else {
       console.log('Cannot add empty goal');
@@ -481,7 +699,7 @@ User question: ${trimmedPrompt}`
                     </div>
                     <div style={styles.messageContent}>
                       <div style={styles.messageRole}>
-                        {msg.role === 'user' ? 'You' : 'AI Assistant'}
+                        {msg.role === 'user' ? 'You' : 'AURA'}
                       </div>
                       <div style={styles.messageText}>
                         {msg.content}
@@ -502,7 +720,7 @@ User question: ${trimmedPrompt}`
                     <span style={{...styles.dot, animationDelay: '0.2s'}}>●</span>
                     <span style={{...styles.dot, animationDelay: '0.4s'}}>●</span>
                   </div>
-                  <span style={styles.loadingText}>AI is thinking...</span>
+                  <span style={styles.loadingText}>AURA is thinking...</span>
                 </motion.div>
               )}
               <div ref={chatEndRef} />
@@ -534,7 +752,7 @@ User question: ${trimmedPrompt}`
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyPress={handleKeyPress}
                   style={styles.input}
-                  placeholder="Ask me anything about growth, habits, productivity..."
+                  placeholder="Ask AURA about growth, habits, productivity..."
                   disabled={isLoading}
                   rows={1}
                 />
@@ -557,12 +775,29 @@ User question: ${trimmedPrompt}`
                   ) : (
                     <>
                       <span>✨</span>
-                      Ask AI
+                      Ask AURA
                     </>
                   )}
                 </motion.button>
               </div>
             </motion.form>
+            
+            {/* --- 🧠 NEW: CLEAR MEMORY BUTTON --- */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('aura-conversation-history');
+                setConversationHistory([]);
+                setMessages(prev => [
+                  ...prev,
+                  { role: 'assistant', content: '🧹 Memory cleared! We can start our conversation fresh.' }
+                ]);
+              }}
+              style={styles.clearButton}
+            >
+              🧹 Clear Memory
+            </button>
+            {/* --- END: NEW --- */}
+
 
             <motion.div
               initial={{ opacity: 0 }}
@@ -1143,9 +1378,41 @@ const styles = {
     fontWeight: '600',
     transition: 'all 0.3s ease',
   },
+  
+  // --- 🧠 NEW: STYLE FOR CLEAR BUTTON ---
+  clearButton: {
+    background: 'rgba(239, 68, 68, 0.2)',
+    color: '#f87171',
+    border: '1px solid rgba(239, 68, 68, 0.4)',
+    borderRadius: '10px',
+    padding: '8px 14px',
+    cursor: 'pointer',
+    fontSize: '0.8rem',
+    marginTop: '0px', // Adjusted margin
+    marginBottom: '15px', // Adjusted margin
+    width: 'fit-content',
+    alignSelf: 'center', 
+    transition: 'all 0.3s ease',
+  }
 };
 
 // CSS animations
 const styleSheet = document.createElement("style");
-styleSheet.textContent = `\n  @keyframes pulse {\n    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }\n    50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }\n  }\n  @keyframes float {\n    0%, 100% { transform: translateY(0px); }\n    50% { transform: translateY(-20px); }\n  }\n  @keyframes bounce {\n    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }\n    40% { transform: scale(1); opacity: 1; }\n  }\n  @keyframes spin {\n    to { transform: rotate(360deg); }\n  }\n`;
+styleSheet.textContent = `
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
 document.head.appendChild(styleSheet);

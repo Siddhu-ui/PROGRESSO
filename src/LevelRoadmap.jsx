@@ -5,23 +5,23 @@ import { FaTrophy, FaStar, FaCrown, FaFire, FaBolt, FaGem, FaInfoCircle, FaLock,
 import axios from 'axios'; // For backend API calls
 import { useTheme } from './ThemeContext';
 
-// Enhanced level data (unchanged)
+// Level data with updated XP requirements based on the image
 const LEVELS = [
-  { id: 1, name: "Sprout", xpRequired: 250, icon: "🌱", color: "#10b981", description: "Your journey begins! Take your first steps toward growth.", reward: "Basic Profile Badge" },
-  { id: 2, name: "Seedling", xpRequired: 500, icon: "🌿", color: "#3b82f6", description: "Growing stronger each day. Keep up the momentum!", reward: "Daily Streak Multiplier" },
-  { id: 3, name: "Bloom", xpRequired: 750, icon: "🌸", color: "#8b5cf6", description: "Your efforts are starting to show beautiful results.", reward: "Custom Theme Access" },
+  { id: 1, name: "Sprout", xpRequired: 0, icon: "🌱", color: "#10b981", description: "Your journey begins! Take your first steps toward growth.", reward: "Basic Profile Badge" },
+  { id: 2, name: "Seedling", xpRequired: 250, icon: "🌿", color: "#3b82f6", description: "Growing stronger each day. Keep up the momentum!", reward: "Daily Streak Multiplier" },
+  { id: 3, name: "Bloom", xpRequired: 500, icon: "🌸", color: "#8b5cf6", description: "Your efforts are starting to show beautiful results.", reward: "Custom Theme Access" },
   { id: 4, name: "Growth", xpRequired: 1000, icon: "🌳", color: "#ec4899", description: "Steady progress and consistent effort lead to substantial growth.", reward: "Bonus XP Tasks" },
-  { id: 5, name: "Flourish", xpRequired: 1250, icon: "🌺", color: "#f59e0b", description: "You're flourishing! Your habits are becoming second nature.", reward: "Achievement Showcase" },
-  { id: 6, name: "Thrive", xpRequired: 1500, icon: "🌴", color: "#ef4444", description: "Thriving in your journey, inspiring others around you.", reward: "Weekly Challenge Access" },
-  { id: 7, name: "Excel", xpRequired: 1750, icon: "⭐", color: "#dc2626", description: "Excellence is not an act but a habit you've mastered.", reward: "Profile Animations" },
-  { id: 8, name: "Master", xpRequired: 2000, icon: "👑", color: "#7c3aed", description: "You've mastered the fundamentals and are ready for greater challenges.", reward: "Exclusive Avatar Frame" },
-  { id: 9, name: "Sage", xpRequired: 2250, icon: "🧙", color: "#db2777", description: "Your wisdom and experience guide not only you but others.", reward: "Mentor Badge" },
-  { id: 10, name: "Legend", xpRequired: 2500, icon: "🏆", color: "#06b6d4", description: "Your dedication has made you legendary among peers.", reward: "Custom Dashboard Layout" },
-  { id: 11, name: "Champion", xpRequired: 2750, icon: "⚡", color: "#fbbf24", description: "A champion of personal growth, unstoppable and inspiring.", reward: "Double XP Weekends" },
-  { id: 12, name: "Hero", xpRequired: 3000, icon: "🦸", color: "#a855f7", description: "Your heroic journey inspires everyone around you.", reward: "Special Event Access" },
-  { id: 13, name: "Titan", xpRequired: 3250, icon: "💪", color: "#f97316", description: "Titan of discipline and consistency, a force to be reckoned with.", reward: "Leaderboard Spotlight" },
-  { id: 14, name: "Oracle", xpRequired: 3500, icon: "🔮", color: "#0ea5e9", description: "Your insights and foresight guide your perfect decisions.", reward: "Predictive Analytics" },
-  { id: 15, name: "Divine", xpRequired: 3750, icon: "✨", color: "#fcd34d", description: "You've reached the pinnacle of personal excellence.", reward: "Legacy Achievement" },
+  { id: 5, name: "Flourish", xpRequired: 1500, icon: "🌺", color: "#f59e0b", description: "You're flourishing! Your habits are becoming second nature.", reward: "Achievement Showcase" },
+  { id: 6, name: "Thrive", xpRequired: 2000, icon: "🌴", color: "#ef4444", description: "Thriving in your journey, inspiring others around you.", reward: "Weekly Challenge Access" },
+  { id: 7, name: "Excel", xpRequired: 2500, icon: "⭐", color: "#dc2626", description: "Excellence is not an act but a habit you've mastered.", reward: "Profile Animations" },
+  { id: 8, name: "Master", xpRequired: 3000, icon: "👑", color: "#7c3aed", description: "You've mastered the fundamentals and are ready for greater challenges.", reward: "Exclusive Avatar Frame" },
+  { id: 9, name: "Sage", xpRequired: 3500, icon: "🧙", color: "#db2777", description: "Your wisdom and experience guide not only you but others.", reward: "Mentor Badge" },
+  { id: 10, name: "Legend", xpRequired: 4000, icon: "🏆", color: "#06b6d4", description: "Your dedication has made you legendary among peers.", reward: "Custom Dashboard Layout" },
+  { id: 11, name: "Champion", xpRequired: 4500, icon: "⚡", color: "#fbbf24", description: "A champion of personal growth, unstoppable and inspiring.", reward: "Double XP Weekends" },
+  { id: 12, name: "Hero", xpRequired: 5000, icon: "🦸", color: "#a855f7", description: "Your heroic journey inspires everyone around you.", reward: "Special Event Access" },
+  { id: 13, name: "Titan", xpRequired: 5500, icon: "💪", color: "#f97316", description: "Titan of discipline and consistency, a force to be reckoned with.", reward: "Leaderboard Spotlight" },
+  { id: 14, name: "Oracle", xpRequired: 6000, icon: "🔮", color: "#0ea5e9", description: "Your insights and foresight guide your perfect decisions.", reward: "Predictive Analytics" },
+  { id: 15, name: "Divine", xpRequired: 6500, icon: "✨", color: "#fcd34d", description: "You've reached the pinnacle of personal excellence.", reward: "Legacy Achievement" },
 ];
 
 // MODIFIED: Props now take level and xp directly from your Dashboard state
@@ -96,35 +96,61 @@ function LevelRoadmap({ level, xp }) {
     }
   };
 
-  // REMOVED: fetchUserProgress function
-  // REMOVED: addXP function
-
-  // UPDATED: These functions now use the `level` and `xp` props directly
-  const getCurrentLevelInfo = () => {
-    return LEVELS.find(l => l.id === level) || LEVELS[0];
-  };
-
-  const getNextLevelInfo = () => {
-    return LEVELS.find(l => l.id === level + 1) || LEVELS[LEVELS.length - 1];
-  };
-
-  const getProgressPercentage = () => {
-    const currentLevelInfo = getCurrentLevelInfo();
-
-    if (level >= LEVELS.length) {
-        return 100;
+  // Calculate the user's level based on XP
+  const calculateLevel = (xp) => {
+    // If user has 0 XP, they're at level 1 (Sprout)
+    if (xp === 0) return 1;
+    
+    // For any XP > 0, they should be at least level 2 (Seedling)
+    let level = 2;
+    
+    // Check each level starting from 3 (Bloom) to see if user qualifies
+    for (let i = 3; i <= LEVELS.length; i++) {
+      if (xp >= LEVELS[i-1].xpRequired) {
+        level = i;
+      } else {
+        break;
+      }
     }
-
-    // Use the *previous* level's XP requirement as the starting point
-    const currentLevelStartXP = LEVELS.find(l => l.id === level)?.xpRequired - 250 || 0;
     
-    // XP earned *within* the current level
-    const xpInCurrentLevel = xp - currentLevelStartXP;
-    
-    // XP needed to pass this level is always 250
-    const xpNeededForLevel = 250;
+    return level;
+  };
 
-    return Math.min((xpInCurrentLevel / xpNeededForLevel) * 100, 100);
+  // Calculate current level and next level info
+  const currentLevelId = calculateLevel(xp || 0);
+  const currentLevel = LEVELS.find(l => l.id === currentLevelId) || LEVELS[0];
+  const nextLevel = LEVELS.find(l => l.id === currentLevelId + 1) || LEVELS[LEVELS.length - 1];
+  
+  // Calculate progress percentage
+  const progressPercent = (() => {
+    // If max level, return 100%
+    if (currentLevelId >= LEVELS[LEVELS.length - 1].id) return 100;
+    
+    const currentXP = xp || 0;
+    const currentLevelXP = currentLevel.xpRequired;
+    const nextLevelXP = nextLevel.xpRequired;
+    
+    // Calculate progress within current level
+    const xpInCurrentLevel = currentXP - currentLevelXP;
+    const xpNeededForNextLevel = nextLevelXP - currentLevelXP;
+    
+    // Calculate percentage, ensuring it's between 0 and 100
+    return Math.min(Math.max((xpInCurrentLevel / xpNeededForNextLevel) * 100, 0), 100);
+  })();
+
+  // Get current level info based on calculated level
+  const getCurrentLevelInfo = () => {
+    return currentLevel;
+  };
+
+  // Get next level info
+  const getNextLevelInfo = () => {
+    return nextLevel;
+  };
+
+  // Get progress percentage to next level
+  const getProgressPercentage = () => {
+    return progressPercent;
   };
 
   // Function to handle level node click (unchanged)
@@ -212,10 +238,10 @@ function LevelRoadmap({ level, xp }) {
 
   // REMOVED: Loading state check
 
-  // UPDATED: These variables now use the props
-  const currentLevel = getCurrentLevelInfo();
-  const nextLevel = getNextLevelInfo();
-  const progressPercent = getProgressPercentage();
+  // Use the already calculated level and progress values
+  const currentLevelInfo = currentLevel;
+  const nextLevelInfo = nextLevel;
+  const currentProgress = progressPercent;
 
   return (
     <div style={containerStyle}>
@@ -314,7 +340,7 @@ function LevelRoadmap({ level, xp }) {
             <FaCrown size={50} color="#fbbf24" />
             <h2>LEVEL UP!</h2>
             {/* UPDATED: Uses `currentLevel` which is derived from props */}
-            <p>🎉 Congratulations! You’ve reached Level {currentLevel.id}: {currentLevel.name}! Keep growing!</p>
+            <p>🎉 Congratulations! You've reached Level {currentLevel.id}: {currentLevel.name}! Keep growing!</p>
             <div style={styles.rewardUnlocked}>
               <FaMedal color="#fbbf24" size={24} style={{ marginRight: '10px' }} />
               <span>Reward Unlocked: {currentLevel.reward}</span>
@@ -322,7 +348,6 @@ function LevelRoadmap({ level, xp }) {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* Header Section (unchanged) */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -343,24 +368,23 @@ function LevelRoadmap({ level, xp }) {
         transition={{ type: "spring", stiffness: 300 }}
         style={{
           ...styles.currentLevelCard,
-          background: `linear-gradient(135deg, ${currentLevel.color}22, ${currentLevel.color}44)`,
-          borderColor: currentLevel.color,
+          background: `linear-gradient(135deg, ${currentLevelInfo.color}22, ${currentLevelInfo.color}44)`,
+          borderColor: currentLevelInfo.color,
         }}
-        onClick={() => handleLevelClick(currentLevel)}
+        onClick={() => handleLevelClick(currentLevelInfo)}
       >
-        <div style={styles.levelIcon}>{currentLevel.icon}</div>
+        <div style={styles.levelIcon}>{currentLevelInfo.icon}</div>
         <div style={styles.levelInfo}>
           <h2 style={styles.levelName}>
-            Level {currentLevel.id}: {currentLevel.name}
+            Level {currentLevelInfo.id}: {currentLevelInfo.name}
           </h2>
           <p style={styles.xpText}>
-            {/* UPDATED: Use `xp` prop */}
-            {xp} / {nextLevel.xpRequired} XP
+            {xp} / {nextLevelInfo.xpRequired} XP
           </p>
-          <p style={styles.levelDescription}>{currentLevel.description}</p>
+          <p style={styles.levelDescription}>{currentLevelInfo.description}</p>
         </div>
         <div style={styles.levelBadge}>
-          <FaStar color={currentLevel.color} size={24} />
+          <FaStar color={currentLevelInfo.color} size={24} />
           <FaInfoCircle 
             color="#fff" 
             size={16} 
@@ -373,13 +397,13 @@ function LevelRoadmap({ level, xp }) {
       <div style={styles.progressContainer}>
         <div style={styles.progressLabels}>
           <span style={styles.progressLabel}>
-            {currentLevel.name}
+            {currentLevelInfo.name}
           </span>
           <span style={styles.progressLabel}>
-            {progressPercent.toFixed(0)}%
+            {currentProgress.toFixed(0)}%
           </span>
           <span style={styles.progressLabel}>
-            {nextLevel.name}
+            {nextLevelInfo.name}
           </span>
         </div>
         <div style={styles.progressBarBg}>
@@ -389,7 +413,7 @@ function LevelRoadmap({ level, xp }) {
             transition={{ duration: 0.8, ease: "easeOut" }}
             style={{
               ...styles.progressBarFill,
-              background: `linear-gradient(90deg, ${currentLevel.color}, ${nextLevel.color})`,
+              background: `linear-gradient(90deg, ${currentLevelInfo.color}, ${nextLevelInfo.color})`,
             }}
           />
         </div>
@@ -443,15 +467,11 @@ function LevelRoadmap({ level, xp }) {
       {/* Roadmap Path */}
       <div style={styles.roadmapContainer} ref={roadmapRef}>
         <h3 style={styles.roadmapTitle}>Level Roadmap</h3>
-        <motion.div
-          // REMOVED: complex roadmap animation state
-          style={styles.roadmapPath}
-        >
+        <motion.div style={styles.roadmapPath}>
           {LEVELS.map((levelNode, index) => {
-            // UPDATED: Use `level` prop for all checks
-            const isUnlocked = level >= levelNode.id;
-            const isCurrent = level === levelNode.id;
-            const isNext = level + 1 === levelNode.id;
+            const isUnlocked = currentLevel >= levelNode.id;
+            const isCurrent = currentLevel === levelNode.id;
+            const isNext = currentLevel + 1 === levelNode.id;
 
             return (
               <motion.div
