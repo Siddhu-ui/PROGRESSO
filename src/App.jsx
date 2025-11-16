@@ -1,24 +1,28 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom"; // Added useLocation
 import { AnimatePresence, motion } from "framer-motion";
 import { Palette, LogOut } from "lucide-react";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import ThemeCustomizer from "./ThemeCustomizer";
 import Welcome from "./Welcome";
-import Auth from "./Auth";
+// Removed Auth (not used)
 import LoginPage from "./LoginPage";
 import Dashboard from "./Dashboard";
-import Profile from "./ProfilePage";
-import Leaderboard from "./Leaderboard";
-import AdventureMap from "./AdventureMap.jsx";
-import Game from "./Game";
-import AIAssistant from "./AIAssistant";
-import LevelRoadmap from "./LevelRoadmap";
+import Profile from "./ProfilePage"; // Make sure this is unused if Dashboard handles it
+import Leaderboard from "./Leaderboard"; // Make sure this is unused if Dashboard handles it
+import AdventureMap from "./AdventureMap.jsx"; // Make sure this is unused if Dashboard handles it
+import Game from "./Game"; // Make sure this is unused if Dashboard handles it
+import AIAssistant from "./AIAssistant"; // Make sure this is unused if Dashboard handles it
+import LevelRoadmap from "./LevelRoadmap"; // Make sure this is unused if Dashboard handles it
 import { onAuthStateChange, db, logout } from './firebase';
 import { doc, getDoc } from "firebase/firestore";
 
+// --- NEW: We will create this component next ---
+// import InvitePage from "./InvitePage"; 
+
+// --- This component holds all the animated routes ---
 function AnimatedRoutes({ user, setUser, token, setToken }) {
-  // ...existing code...
+  const location = useLocation(); // Added location for AnimatePresence
 
   const pageVariants = {
     initial: {
@@ -120,153 +124,23 @@ function AnimatedRoutes({ user, setUser, token, setToken }) {
           }
         />
 
-        {/* Profile - (PROTECTED) */}
+        {/* --- NEW: INVITE ROUTE --- */}
         <Route
-          path="/profile"
+          path="/invite/:inviteId"
           element={
-            user ? (
+            !user ? (
               <motion.div
-                custom="profile"
+                custom="auth"
                 variants={{
-                  initial: { opacity: 0, x: 50 },
-                  in: {
-                    opacity: 1,
-                    x: 0,
-                    transition: { duration: 0.5, ease: "easeOut" }
-                  },
-                  out: {
-                    opacity: 0,
-                    x: -50,
-                    transition: { duration: 0.3, ease: "easeIn" }
-                  }
-                }}
-                initial="initial"
-                animate="in"
-                exit="out"
-              >
-                <Profile user={user} setUser={setUser} />
-              </motion.div>
-            ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
-            )
-          }
-        />
-
-        {/* Leaderboard - (PROTECTED) */}
-        <Route
-          path="/leaderboard"
-          element={
-            user ? (
-              <motion.div
-                custom="leaderboard"
-                variants={{
-                  initial: { opacity: 0, scale: 0.9, y: 30 },
+                  initial: { opacity: 0, scale: 0.95 },
                   in: {
                     opacity: 1,
                     scale: 1,
-                    y: 0,
-                    transition: { duration: 0.5, ease: "easeOut" }
-                  },
-                  out: {
-                    opacity: 0,
-                    scale: 0.95,
-                    y: -30,
-                    transition: { duration: 0.3, ease: "easeIn" }
-                  }
-                }}
-                initial="initial"
-                animate="in"
-                exit="out"
-              >
-                <Leaderboard />
-              </motion.div>
-            ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
-            )
-          }
-        />
-
-        {/* Adventure Map - (PROTECTED) */}
-        <Route
-          path="/adventure"
-          element={
-            user ? (
-              <motion.div
-                custom="adventure"
-                variants={{
-                  initial: { opacity: 0, scale: 0.8 },
-                  in: {
-                    opacity: 1,
-                    scale: 1,
-                    transition: { duration: 0.6, ease: "easeOut" }
+                    transition: { duration: 0.4, ease: "easeOut" }
                   },
                   out: {
                     opacity: 0,
                     scale: 0.9,
-                    transition: { duration: 0.4, ease: "easeIn" }
-                  }
-                }}
-                initial="initial"
-                animate="in"
-                exit="out"
-              >
-                <AdventureMap />
-              </motion.div>
-            ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
-            )
-          }
-        />
-
-        {/* Game - (PROTECTED) */}
-        <Route
-          path="/game"
-          element={
-            user ? (
-              <motion.div
-                custom="game"
-                variants={{
-                  initial: { opacity: 0, rotateY: -90 },
-                  in: {
-                    opacity: 1,
-                    rotateY: 0,
-                    transition: { duration: 0.6, ease: "easeOut" }
-                  },
-                  out: {
-                    opacity: 0,
-                    rotateY: 90,
-                    transition: { duration: 0.4, ease: "easeIn" }
-                  }
-                }}
-                initial="initial"
-                animate="in"
-                exit="out"
-              >
-                <Game />
-              </motion.div>
-            ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
-            )
-          }
-        />
-
-        {/* AI Assistant - (PROTECTED) */}
-        <Route
-          path="/ai-assistant"
-          element={
-            user ? (
-              <motion.div
-                custom="ai"
-                variants={{
-                  initial: { opacity: 0, x: -100 },
-                  in: {
-                    opacity: 1,
-                    x: 0,
-                    transition: { duration: 0.5, ease: "easeOut" }
-                  },
-                  out: {
-                    opacity: 0,
-                    x: 100,
                     transition: { duration: 0.3, ease: "easeIn" }
                   }
                 }}
@@ -274,52 +148,28 @@ function AnimatedRoutes({ user, setUser, token, setToken }) {
                 animate="in"
                 exit="out"
               >
-                <AIAssistant />
+                {/* This will show the login page.
+                  We can create a new <InvitePage /> component later.
+                */}
+                <LoginPage setUser={setUser} setToken={setToken} isInvite={true} />
               </motion.div>
             ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
+              <Navigate to="/dashboard" replace /> // If already logged in, just go to dashboard
             )
           }
         />
 
-        {/* Level Roadmap - (PROTECTED) */}
-        <Route
-          path="/levels"
-          element={
-            user ? (
-              <motion.div
-                custom="levels"
-                variants={{
-                  initial: { opacity: 0, y: 100, scale: 0.8 },
-                  in: {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    transition: { duration: 0.7, ease: "easeOut" }
-                  },
-                  out: {
-                    opacity: 0,
-                    y: -100,
-                    scale: 0.9,
-                    transition: { duration: 0.4, ease: "easeIn" }
-                  }
-                }}
-                initial="initial"
-                animate="in"
-                exit="out"
-              >
-                <LevelRoadmap user={user} />
-              </motion.div>
-            ) : (
-              <Navigate to="/auth" state={{ from: location }} replace />
-            )
-          }
-        />
+        {/* NOTE: Your Profile, Leaderboard, etc. are all inside your Dashboard component,
+          so we don't need separate routes for them here. This is correct.
+        */}
+
+        {/* Fallback route - if no other route matches, go to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        
       </Routes>
     </AnimatePresence>
   );
 }
-
 function AppContent() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -330,7 +180,6 @@ function AppContent() {
 
   console.log('AppContent rendering, loading:', loading, 'user:', user);
 
-  // Fallback theme values in case theme context fails
   const fallbackTheme = {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
     cardBg: 'rgba(255, 255, 255, 0.1)',
@@ -371,6 +220,8 @@ function AppContent() {
             skillsUnlocked: firestoreData.skillsUnlocked ?? existingLocalUser.skillsUnlocked ?? 0,
             last_updated: firestoreData.last_updated ?? existingLocalUser.last_updated ?? null,
             createdAt: firestoreData.createdAt ?? existingLocalUser.createdAt ?? null,
+            // Ensure username is set for the invite link
+            username: firestoreData.username || authUser.displayName || authUser.email?.split('@')[0] || 'explorer'
           };
 
           setUser(mergedUser);
@@ -397,35 +248,24 @@ function AppContent() {
         setToken(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // ---------------------------------
-        // **FIX 1: REMOVED a** `Maps('/auth')` **from here**
-        // This stops the forced redirect on logout.
-        // ---------------------------------
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []); // Empty dependency array since onAuthStateChange handles everything
+  }, [navigate]); // Added navigate as a dependency
 
   // Logout function
   const handleLogout = async () => {
     try {
-      // Clear local state first
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
       setToken(null);
-
-      // Then logout from Firebase
       await logout();
-      
-      // Navigate to home after logout
       navigate('/');
-
     } catch (error) {
       console.error('Logout failed:', error);
-      // Fallback navigation in case auth state listener doesn't trigger
       navigate('/');
     }
   };
@@ -537,23 +377,14 @@ function AppContent() {
         )}
       </motion.div>
 
-      {/* --------------------------------- */}
-      {/* **FIX: Main Navigation Bar REMOVED** */}
-      {/* --------------------------------- */}
-      
-
       {/* Theme Customizer Modal */}
       <ThemeCustomizer 
         isOpen={isThemeCustomizerOpen} 
         onClose={() => setIsThemeCustomizerOpen(false)} 
       />
 
-      {/* Routes - All accessible without authentication */}
+      {/* --- RENDER THE ROUTES --- */}
       <AnimatedRoutes user={user} setUser={setUser} token={token} setToken={setToken} />
-      
-      {/* --------------------------------- */}
-      {/* **FIX 3: Removed the stray <Routes> component from here.** */}
-      {/* --------------------------------- */}
     </>
   );
 }

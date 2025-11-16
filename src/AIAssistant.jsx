@@ -11,6 +11,12 @@ import {
   FiWind, FiCpu, FiUser, FiSend, FiTrash2, FiSun, FiAward
 } from 'react-icons/fi';
 
+// --- Default Welcome Message ---
+const welcomeMessage = {
+  role: 'assistant',
+  content: "👋 Hi! I'm AURA, your AI Growth Coach. Ask me anything about building better habits, productivity, or health. What's on your mind?"
+};
+
 // Helper component for accordion icons
 const AccordionIcon = ({ isOpen }) => (
   <motion.svg
@@ -250,18 +256,23 @@ export default function AIAssistant({ addXP }) {
   const { theme } = useTheme();
   const currentTheme = theme || {};
   const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "👋 Hi! I'm AURA, your AI Growth Coach. Ask me anything about building better habits, productivity, or health. What's on your mind?"
+  
+  // --- UPDATED: Load messages from localStorage ---
+  const [messages, setMessages] = useState(() => {
+    try {
+      const savedMessages = localStorage.getItem('aura-chat-messages');
+      return savedMessages ? JSON.parse(savedMessages) : [welcomeMessage];
+    } catch (e) {
+      console.error("Failed to parse saved messages:", e);
+      return [welcomeMessage];
     }
-  ]);
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [goals, setGoals] = useState([]);
   const [showGoalModal, setShowGoalModal] = useState(false);
   
-  // --- UPDATED: Default XP is now 30 ---
   const [newGoal, setNewGoal] = useState({
     text: '',
     category: 'health',
@@ -269,11 +280,11 @@ export default function AIAssistant({ addXP }) {
   });
   
   const [modalInputRef, setModalInputRef] = useState(null);
-  const [conversationHistory, setConversationHistory] = useState([]);
+  // --- REMOVED: conversationHistory state (now derived from messages) ---
   const chatEndRef = useRef(null);
   const isInitialMount = useRef(true);
 
-  // (All useEffect hooks are unchanged...)
+  // Load goals from localStorage on component mount
   useEffect(() => {
     const savedGoals = localStorage.getItem('growth-goals');
     if (savedGoals) {
@@ -281,16 +292,19 @@ export default function AIAssistant({ addXP }) {
     }
   }, []);
 
+  // Save goals to localStorage whenever goals change
   useEffect(() => {
     localStorage.setItem('growth-goals', JSON.stringify(goals));
   }, [goals]);
 
+  // Focus textarea when modal opens
   useEffect(() => {
     if (showGoalModal && modalInputRef) {
       modalInputRef.focus();
     }
   }, [showGoalModal, modalInputRef]);
 
+  // Scroll to bottom on new message
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -299,16 +313,15 @@ export default function AIAssistant({ addXP }) {
     }
   }, [messages]);
 
+  // --- UPDATED: Save full message history to localStorage ---
   useEffect(() => {
-    const savedHistory = localStorage.getItem('aura-conversation-history');
-    if (savedHistory) {
-      setConversationHistory(JSON.parse(savedHistory));
+    try {
+      // Save only the last 10 messages (user + assistant) to avoid filling up localStorage
+      localStorage.setItem('aura-chat-messages', JSON.stringify(messages.slice(-10)));
+    } catch (e) {
+      console.error("Failed to save messages:", e);
     }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('aura-conversation-history', JSON.stringify(conversationHistory.slice(-5)));
-  }, [conversationHistory]);
+  }, [messages]);
 
 
   // --- handleSubmit function ---
@@ -398,15 +411,13 @@ export default function AIAssistant({ addXP }) {
     const totalGoalsCount = goals.length;
     const pendingGoals = goals.filter(g => !g.completed);
 
-    setConversationHistory(prev => {
-      const updated = [...prev, trimmedPrompt];
-      return updated.slice(-5);
-    });
-
-    const memorySummary =
-      conversationHistory.length > 0
-        ? conversationHistory.map((msg, i) => `(${i + 1}) ${msg}`).join('\n')
-        : 'No prior questions yet. This is the start of the journey.';
+    // --- UPDATED: Build memory from messages state ---
+    const memorySummary = messages.length > 1
+      ? messages.slice(1) // Get all but the welcome message
+          .map(msg => `${msg.role}: ${msg.content}`)
+          .slice(-6) // Get last 6 items (3 user, 3 assistant)
+          .join('\n')
+      : 'No prior questions yet. This is the start of the journey.';
 
     const pendingGoalText = pendingGoals.length > 0
         ? pendingGoals.map(g => `- "${g.text}" (Category: ${g.category}, Reward: ${g.xpValue} XP)`).join('\n')
@@ -430,11 +441,11 @@ export default function AIAssistant({ addXP }) {
         ? 'Be motivating — help them stay consistent.'
         : 'Celebrate progress — inspire continued success.';
 
-    // --- NEW: Get AURA's last message for context ---
-    const lastMessage = messages[messages.length - 1];
-    const auraLastQuestion = (lastMessage.role === 'assistant') 
+    // --- UPDATED: Get AURA's last message for context ---
+    const lastMessage = messages[messages.length - 1]; // Get the last message
+    const auraLastQuestion = (lastMessage && lastMessage.role === 'assistant') 
       ? lastMessage.content 
-      : 'N/A (User spoke last)';
+      : 'N/A (User spoke last or this is the first message)';
     
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -472,7 +483,7 @@ You are **NOT** a generic chatbot. You are the user's *long-term growth partner*
     - *User says:* "i have set a goal"
     - *YOU respond (using context):* "Awesome! I see you've set a new goal to '[Goal Text]' for [XP Value] XP. I'm here to help you break that down. What's your first step, or would you like me to create a plan for you?"
 
-5. **HANDLE "YES/NO" REPLIES (CRITICAL):** If the user's message is just "yes," "yep," "no," "do it," or "tell me more," look at \`AURA'S PREVIOUS MESSAGE\`. This is almost certainly an answer to a question you just asked.
+5. **HANDLE "YES/NO" REPLIES (CRITICAL):** If the user's message is just "yes," "yep," "no," "do it," or "tell me how," look at \`AURA'S PREVIOUS MESSAGE\`. This is almost certainly an answer to a question you just asked.
     - *Example (AURA):* "...would you like me to create a plan for you?"
     - *User says:* "yes"
     - *YOU respond:* "Great! Here is a 3-step plan for '[Goal Text]': [Provide a brief, actionable 3-step plan based on their newest goal]."
@@ -495,7 +506,7 @@ User's current goals:
 ${goalsSummary}
 ${categorySummary}
 
-Recent conversation history (last 5 messages):
+Recent conversation history (last 6 messages):
 ${memorySummary}
 
 Mood context:
@@ -579,7 +590,7 @@ Respond like:
       const goal = {
         id: Date.now(),
         text: newGoal.text.trim(),
-        category: newGoal.category, // --- FIX --- Use category from state object
+        category: newGoal.category, 
         xpValue: newGoal.xpValue || 30, // Save the XP value
         completed: false,
         createdAt: new Date().toISOString(),
@@ -604,7 +615,6 @@ Respond like:
           // If marking as complete, call addXP
           if (addXP) {
             console.log(`Adding ${xpValue} XP for completing goal!`);
-            // We use a unique ID like "goal-12345" for the addXP function
             addXP(`goal-${goal.id}`, xpValue); 
           } else {
             console.warn('addXP function is not connected to AI Assistant');
@@ -632,11 +642,10 @@ Respond like:
     }
   };
 
-  // --- UPDATED `handleModalKeyPress` ---
   const handleModalKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (newGoal.text.trim()) { // Check newGoal.text
+      if (newGoal.text.trim()) {
         handleAddGoal();
       }
     } else if (e.key === 'Escape') {
@@ -795,14 +804,11 @@ Respond like:
               </div>
             </motion.form>
             
+            {/* --- UPDATED: Clear Memory Button --- */}
             <button
               onClick={() => {
-                localStorage.removeItem('aura-conversation-history');
-                setConversationHistory([]);
-                setMessages(prev => [
-                  ...prev,
-                  { role: 'assistant', content: '🧹 Memory cleared! We can start our conversation fresh.' }
-                ]);
+                localStorage.removeItem('aura-chat-messages'); // Clear storage
+                setMessages([welcomeMessage]); // Reset state to welcome message
               }}
               style={styles.clearButton}
             >
@@ -892,8 +898,8 @@ Respond like:
                   <label style={styles.label}>Goal Description</label>
                   <textarea
                     ref={setModalInputRef}
-                    value={newGoal.text} // UPDATED
-                    onChange={(e) => setNewGoal(prev => ({ ...prev, text: e.target.value }))} // UPDATED
+                    value={newGoal.text}
+                    onChange={(e) => setNewGoal(prev => ({ ...prev, text: e.target.value }))}
                     onKeyPress={handleModalKeyPress}
                     style={styles.modalInput}
                     placeholder="What do you want to achieve?"
@@ -901,13 +907,12 @@ Respond like:
                   />
                 </div>
                 
-                {/* --- NEW XP INPUT FIELD --- */}
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>XP Bonus</label>
                   <input
                     type="number"
-                    value={newGoal.xpValue} // UPDATED
-                    onChange={(e) => setNewGoal(prev => ({ ...prev, xpValue: parseInt(e.target.value) || 0 }))} // UPDATED
+                    value={newGoal.xpValue}
+                    onChange={(e) => setNewGoal(prev => ({ ...prev, xpValue: parseInt(e.target.value) || 0 }))}
                     style={styles.modalInput}
                     placeholder="e.g., 30"
                   />
@@ -916,8 +921,8 @@ Respond like:
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>Category</label>
                   <select
-                    value={newGoal.category} // --- FIX ---
-                    onChange={(e) => setNewGoal(prev => ({ ...prev, category: e.target.value }))} // --- FIX ---
+                    value={newGoal.category}
+                    onChange={(e) => setNewGoal(prev => ({ ...prev, category: e.target.value }))}
                     style={styles.modalSelect}
                   >
                     <option value="health">Health & Fitness</option>
@@ -938,11 +943,11 @@ Respond like:
                   </motion.button>
                   <motion.button
                     onClick={handleAddGoal}
-                    disabled={!newGoal.text.trim()} // UPDATED
+                    disabled={!newGoal.text.trim()}
                     style={{
                       ...styles.modalSaveButton,
-                      opacity: newGoal.text.trim() ? 1 : 0.5, // UPDATED
-                      cursor: newGoal.text.trim() ? 'pointer' : 'not-allowed' // UPDATED
+                      opacity: newGoal.text.trim() ? 1 : 0.5,
+                      cursor: newGoal.text.trim() ? 'pointer' : 'not-allowed'
                     }}
                     whileHover={newGoal.text.trim() ? { scale: 1.05 } : {}}
                     whileTap={newGoal.text.trim() ? { scale: 0.95 } : {}}

@@ -1,560 +1,317 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "./supabaseClient";
-import axios from "axios";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  GiWheat, GiHotMeal, GiNoodles, GiChickenOven, GiFruitBowl,
+  GiRiceCooker, GiFlatfish, GiCupcake, GiCoffeeCup,
+  GiBread, GiCorn, GiHotDog, GiMilkCarton, GiChocolateBar
+} from 'react-icons/gi';
+import { 
+  IoFastFoodOutline, IoIceCreamOutline, IoNutrition, IoWaterOutline
+} from 'react-icons/io5';
+import { 
+  MdRestaurant, MdOutlineFoodBank, MdLunchDining, MdFastfood,
+  MdLocalDining, MdOutlineBreakfastDining, MdOutlineRiceBowl
+} from 'react-icons/md';
+import { 
+  FaAppleAlt, FaBreadSlice, FaHamburger, FaLeaf, FaPizzaSlice,
+  FaCarrot, FaCookie, FaDrumstickBite, FaCheese
+} from 'react-icons/fa';
+import { 
+  BiDrink, BiDish 
+} from 'react-icons/bi';
 
 // =================================================================
-// === ⬇️ NEW MEAL SUMMARY COMPONENT (ADD-ON) ⬇️ ===
+// === ⬇️ DESIGN & DATA CONFIGURATION ⬇️ ===
 // =================================================================
-const MealSummaryCard = ({ icon, title, calories, color }) => (
+
+// Centralized design theme - Updated to match lavender/white theme
+const designTheme = {
+  background: "linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)", // Soft lavender gradient
+  cardBg: "rgba(255, 255, 255, 0.95)",     // White with slight transparency
+  text: "#2d3748",         // Dark grey for readability
+  textSecondary: "#718096", // Medium grey
+  border: "#d8b4fe",      // Light lavender border
+  shadow: "0 4px 12px rgba(139, 92, 246, 0.1)", // Soft purple shadow
+  accent: "#8b5cf6", // Lavender accent
+};
+
+// Centralized configuration for all food categories
+const FOOD_CATEGORY_CONFIG = [
+  { key: "breakfast", label: "Breakfast", icon: MdOutlineBreakfastDining, accent: "#f59e0b", description: "Start your day with a balanced meal." },
+  { key: "lunch", label: "Lunch", icon: MdLunchDining, accent: "#10b981", description: "Refuel for the afternoon." },
+  { key: "dinner", label: "Dinner", icon: MdRestaurant, accent: "#3b82f6", description: "Wind down with a nourishing dinner." },
+  { key: "snacks_drinks", label: "Snacks & Drinks", icon: FaAppleAlt, accent: "#ef4444", description: "Healthy snacks and hydration." },
+];
+
+// Helper functions to get data from the config
+const getCategoryConfig = (key) => FOOD_CATEGORY_CONFIG.find(c => c.key === key) || FOOD_CATEGORY_CONFIG.find(c => c.key === 'snacks_drinks');
+const getCategoryAccent = (key) => getCategoryConfig(key).accent;
+const getCategoryLabel = (key) => getCategoryConfig(key).label;
+const getCategoryIcon = (key) => getCategoryConfig(key).icon;
+const getCategoryDescription = (key) => getCategoryConfig(key).description;
+const getCategoryColors = (key) => {
+  const config = getCategoryConfig(key);
+  return {
+    accent: config.accent,
+    accentAlt: config.accent, // Simple version
+    border: `${config.accent}40`, // accent with alpha
+  };
+};
+
+// Icon mapping for each food item
+const FOOD_ICON_MAP = {
+  // Breakfast
+  'Oatmeal': GiWheat,
+  'Greek Yogurt': IoIceCreamOutline,
+  'Scrambled Eggs (2)': MdOutlineBreakfastDining,
+  'Idli (2 pcs)': MdOutlineRiceBowl,
+  'Dosa (1 pc)': MdLocalDining,
+  'Poha (1 cup)': GiRiceCooker,
+  'Upma (1 cup)': GiWheat,
+  'Paratha (1 pc)': FaBreadSlice,
+  'Boiled Eggs (2)': MdOutlineBreakfastDining,
+  'Pancakes (2)': GiCupcake,
+  'French Toast': FaBreadSlice,
+  'Cereal (1 cup)': GiWheat,
+  'Smoothie Bowl': GiFruitBowl,
+  'Avocado Toast': FaBreadSlice,
+  'Bagel with Cream Cheese': FaBreadSlice,
+  // Lunch
+  'Chicken Salad': FaLeaf,
+  'Quinoa Bowl': MdOutlineRiceBowl,
+  'Rice & Dal (1 cup each)': GiRiceCooker,
+  'Sambar Rice (1 plate)': MdOutlineRiceBowl,
+  'Chapati (2) with Sabzi': FaBreadSlice,
+  'Curd Rice (1 cup)': MdOutlineRiceBowl,
+  'Paneer Curry (1 cup)': FaCheese,
+  'Chicken Curry (1 cup)': GiChickenOven,
+  'Fish Curry (1 cup)': GiFlatfish,
+  'Biryani (1 plate)': GiRiceCooker,
+  'Burger (Chicken)': FaHamburger,
+  'Sandwich (Veg)': FaBreadSlice,
+  'Pasta (1 plate)': GiNoodles,
+  'Sushi Roll (8 pcs)': GiFlatfish,
+  'Stir Fry Noodles': GiNoodles,
+  // Dinner
+  'Salmon & Asparagus': GiFlatfish,
+  'Lentil Soup': BiDish,
+  'Roti (2) with Dal': FaBreadSlice,
+  'Khichdi (1 plate)': GiRiceCooker,
+  'Grilled Chicken (200g)': GiChickenOven,
+  'Tofu Stir Fry': IoNutrition,
+  'Fish Fry (2 pcs)': GiFlatfish,
+  'Dal Makhani (1 cup)': BiDish,
+  'Pulao (1 plate)': GiRiceCooker,
+  'Vegetable Curry': FaLeaf,
+  'Grilled Vegetables': FaCarrot,
+  'Paneer Tikka (6 pcs)': FaCheese,
+  'Chicken Salad Bowl': FaDrumstickBite,
+  'Steak (150g)': MdFastfood,
+  'Veg Pasta': GiNoodles,
+  // Snacks & Drinks
+  'Apple': FaAppleAlt,
+  'Almonds (30g)': IoNutrition,
+  'Water': IoWaterOutline,
+  'Banana': GiFruitBowl,
+  'Samosa (1 pc)': MdFastfood,
+  'Boiled Corn (1 cup)': GiCorn,
+  'Sprouts (1 cup)': FaLeaf,
+  'Protein Bar': IoNutrition,
+  'Popcorn (2 cups)': GiCorn,
+  'Milk (1 glass)': GiMilkCarton,
+  'Tea (1 cup)': GiCoffeeCup,
+  'Coffee (Black)': GiCoffeeCup,
+  'Orange Juice (1 glass)': BiDrink,
+  'Protein Shake': BiDrink,
+  'Dark Chocolate (2 pcs)': GiChocolateBar,
+  'Greek Yogurt Cup': IoIceCreamOutline,
+  'Biscuits (2 pcs)': FaCookie,
+  'Carrot Sticks (1 cup)': FaCarrot,
+  'Roasted Chickpeas': IoNutrition,
+  'Smoothie (Mixed Fruit)': BiDrink,
+};
+
+/**
+ * Generates food items for a given category with extensive database.
+ * Expanded with realistic Indian and international food options.
+ */
+const buildFoodItems = (category) => {
+  const items = {
+    breakfast: [
+      // Traditional breakfast items
+      { id: 'b1', name: 'Oatmeal', calories: 150, protein: 5, carbs: 27, fat: 3, benefits: ['Heart-healthy', 'Fiber'], healthTip: 'Add berries for antioxidants.' },
+      { id: 'b2', name: 'Greek Yogurt', calories: 100, protein: 17, carbs: 6, fat: 0, benefits: ['High protein', 'Probiotics'], healthTip: 'Great for gut health.' },
+      { id: 'b3', name: 'Scrambled Eggs (2)', calories: 210, protein: 18, carbs: 2, fat: 15, benefits: ['Protein-rich', 'Vitamins'], healthTip: 'Use olive oil instead of butter.' },
+      { id: 'b4', name: 'Idli (2 pcs)', calories: 156, protein: 4, carbs: 32, fat: 1, benefits: ['Low fat', 'Fermented'], healthTip: 'Pair with sambar for protein.' },
+      { id: 'b5', name: 'Dosa (1 pc)', calories: 168, protein: 5, carbs: 28, fat: 4, benefits: ['Fermented', 'Energy'], healthTip: 'Use less oil for healthier option.' },
+      { id: 'b6', name: 'Poha (1 cup)', calories: 250, protein: 6, carbs: 45, fat: 6, benefits: ['Light', 'Iron'], healthTip: 'Add peanuts for extra protein.' },
+      { id: 'b7', name: 'Upma (1 cup)', calories: 280, protein: 7, carbs: 50, fat: 5, benefits: ['Quick energy', 'Fiber'], healthTip: 'Add vegetables for nutrients.' },
+      { id: 'b8', name: 'Paratha (1 pc)', calories: 300, protein: 6, carbs: 42, fat: 12, benefits: ['Filling', 'Traditional'], healthTip: 'Whole wheat is healthier.' },
+      { id: 'b9', name: 'Boiled Eggs (2)', calories: 155, protein: 13, carbs: 1, fat: 11, benefits: ['Pure protein', 'Portable'], healthTip: 'Perfect pre-workout meal.' },
+      { id: 'b10', name: 'Pancakes (2)', calories: 340, protein: 8, carbs: 58, fat: 8, benefits: ['Sweet treat', 'Energy'], healthTip: 'Use whole grain flour.' },
+      { id: 'b11', name: 'French Toast', calories: 320, protein: 12, carbs: 48, fat: 10, benefits: ['Comfort food', 'Protein'], healthTip: 'Top with fruit instead of syrup.' },
+      { id: 'b12', name: 'Cereal (1 cup)', calories: 220, protein: 6, carbs: 45, fat: 2, benefits: ['Quick', 'Fortified'], healthTip: 'Choose low-sugar options.' },
+      { id: 'b13', name: 'Smoothie Bowl', calories: 280, protein: 10, carbs: 52, fat: 5, benefits: ['Antioxidants', 'Vitamins'], healthTip: 'Add chia seeds for omega-3.' },
+      { id: 'b14', name: 'Avocado Toast', calories: 350, protein: 10, carbs: 35, fat: 20, benefits: ['Healthy fats', 'Fiber'], healthTip: 'A trendy nutritious choice.' },
+      { id: 'b15', name: 'Bagel with Cream Cheese', calories: 380, protein: 12, carbs: 58, fat: 12, benefits: ['Filling', 'Calcium'], healthTip: 'Choose whole wheat bagel.' },
+    ],
+    lunch: [
+      // Lunch options
+      { id: 'l1', name: 'Chicken Salad', calories: 350, protein: 30, carbs: 10, fat: 20, benefits: ['Lean protein', 'Greens'], healthTip: 'Watch out for high-calorie dressings.' },
+      { id: 'l2', name: 'Quinoa Bowl', calories: 450, protein: 15, carbs: 60, fat: 18, benefits: ['Complete protein', 'Fiber'], healthTip: 'A balanced vegetarian option.' },
+      { id: 'l3', name: 'Rice & Dal (1 cup each)', calories: 420, protein: 14, carbs: 75, fat: 5, benefits: ['Complete meal', 'Protein'], healthTip: 'Indian staple combo.' },
+      { id: 'l4', name: 'Sambar Rice (1 plate)', calories: 380, protein: 12, carbs: 68, fat: 6, benefits: ['Balanced', 'Vegetables'], healthTip: 'Rich in vitamins.' },
+      { id: 'l5', name: 'Chapati (2) with Sabzi', calories: 400, protein: 12, carbs: 60, fat: 12, benefits: ['Whole grain', 'Vegetables'], healthTip: 'Use minimal oil in sabzi.' },
+      { id: 'l6', name: 'Curd Rice (1 cup)', calories: 300, protein: 10, carbs: 52, fat: 6, benefits: ['Probiotic', 'Cooling'], healthTip: 'Great for digestion.' },
+      { id: 'l7', name: 'Paneer Curry (1 cup)', calories: 420, protein: 18, carbs: 20, fat: 28, benefits: ['Calcium', 'Protein'], healthTip: 'High in saturated fat.' },
+      { id: 'l8', name: 'Chicken Curry (1 cup)', calories: 380, protein: 32, carbs: 15, fat: 22, benefits: ['Protein-rich', 'Flavorful'], healthTip: 'Remove skin for less fat.' },
+      { id: 'l9', name: 'Fish Curry (1 cup)', calories: 320, protein: 28, carbs: 12, fat: 18, benefits: ['Omega-3', 'Lean'], healthTip: 'Excellent for heart health.' },
+      { id: 'l10', name: 'Biryani (1 plate)', calories: 550, protein: 20, carbs: 75, fat: 18, benefits: ['Festive', 'Complete'], healthTip: 'Portion control is key.' },
+      { id: 'l11', name: 'Burger (Chicken)', calories: 520, protein: 28, carbs: 48, fat: 22, benefits: ['Satisfying', 'Portable'], healthTip: 'Skip fries to reduce calories.' },
+      { id: 'l12', name: 'Sandwich (Veg)', calories: 320, protein: 12, carbs: 45, fat: 10, benefits: ['Quick', 'Balanced'], healthTip: 'Add more veggies.' },
+      { id: 'l13', name: 'Pasta (1 plate)', calories: 480, protein: 14, carbs: 72, fat: 15, benefits: ['Energy', 'Filling'], healthTip: 'Choose whole wheat pasta.' },
+      { id: 'l14', name: 'Sushi Roll (8 pcs)', calories: 380, protein: 16, carbs: 58, fat: 8, benefits: ['Light', 'Omega-3'], healthTip: 'Low-calorie if not fried.' },
+      { id: 'l15', name: 'Stir Fry Noodles', calories: 460, protein: 18, carbs: 62, fat: 16, benefits: ['Vegetables', 'Quick'], healthTip: 'Control oil amount.' },
+    ],
+    dinner: [
+      // Dinner options
+      { id: 'd1', name: 'Salmon & Asparagus', calories: 500, protein: 40, carbs: 20, fat: 30, benefits: ['Omega-3', 'Vitamins'], healthTip: 'Baking or grilling is healthiest.' },
+      { id: 'd2', name: 'Lentil Soup', calories: 300, protein: 18, carbs: 40, fat: 10, benefits: ['High fiber', 'Plant-based'], healthTip: 'A hearty, low-fat meal.' },
+      { id: 'd3', name: 'Roti (2) with Dal', calories: 380, protein: 14, carbs: 62, fat: 8, benefits: ['Traditional', 'Balanced'], healthTip: 'Whole wheat roti is best.' },
+      { id: 'd4', name: 'Khichdi (1 plate)', calories: 320, protein: 12, carbs: 55, fat: 6, benefits: ['Easy digestion', 'Comfort'], healthTip: 'Perfect for light dinner.' },
+      { id: 'd5', name: 'Grilled Chicken (200g)', calories: 420, protein: 48, carbs: 0, fat: 24, benefits: ['High protein', 'Low carb'], healthTip: 'Excellent for muscle building.' },
+      { id: 'd6', name: 'Tofu Stir Fry', calories: 340, protein: 22, carbs: 28, fat: 16, benefits: ['Plant protein', 'Iron'], healthTip: 'Vegan protein source.' },
+      { id: 'd7', name: 'Fish Fry (2 pcs)', calories: 380, protein: 32, carbs: 15, fat: 22, benefits: ['Protein', 'Omega-3'], healthTip: 'Baked is healthier than fried.' },
+      { id: 'd8', name: 'Dal Makhani (1 cup)', calories: 450, protein: 16, carbs: 45, fat: 22, benefits: ['Protein', 'Creamy'], healthTip: 'High in calories, enjoy in moderation.' },
+      { id: 'd9', name: 'Pulao (1 plate)', calories: 420, protein: 10, carbs: 68, fat: 12, benefits: ['Aromatic', 'Filling'], healthTip: 'Add vegetables for nutrition.' },
+      { id: 'd10', name: 'Vegetable Curry', calories: 280, protein: 8, carbs: 38, fat: 12, benefits: ['Fiber', 'Vitamins'], healthTip: 'Low-calorie, nutrient-rich.' },
+      { id: 'd11', name: 'Grilled Vegetables', calories: 180, protein: 6, carbs: 28, fat: 6, benefits: ['Low cal', 'Fiber'], healthTip: 'Perfect side or light meal.' },
+      { id: 'd12', name: 'Paneer Tikka (6 pcs)', calories: 380, protein: 20, carbs: 12, fat: 28, benefits: ['Protein', 'Calcium'], healthTip: 'Grilled is healthier.' },
+      { id: 'd13', name: 'Chicken Salad Bowl', calories: 320, protein: 32, carbs: 18, fat: 14, benefits: ['High protein', 'Fresh'], healthTip: 'Ideal for weight loss.' },
+      { id: 'd14', name: 'Steak (150g)', calories: 480, protein: 38, carbs: 0, fat: 36, benefits: ['Iron', 'Protein'], healthTip: 'Choose lean cuts.' },
+      { id: 'd15', name: 'Veg Pasta', calories: 420, protein: 12, carbs: 64, fat: 14, benefits: ['Comfort', 'Vegetables'], healthTip: 'Use tomato-based sauce.' },
+    ],
+    snacks_drinks: [
+      // Snacks and drinks
+      { id: 's1', name: 'Apple', calories: 95, protein: 0, carbs: 25, fat: 0, benefits: ['Fiber', 'Vitamins'], healthTip: 'An apple a day keeps doctor away!' },
+      { id: 's2', name: 'Almonds (30g)', calories: 160, protein: 6, carbs: 6, fat: 14, benefits: ['Healthy fats', 'Protein'], healthTip: 'Portion control is key.' },
+      { id: 's3', name: 'Water', calories: 0, protein: 0, carbs: 0, fat: 0, benefits: ['Hydration'], healthTip: 'Drink at least 8 glasses a day.' },
+      { id: 's4', name: 'Banana', calories: 105, protein: 1, carbs: 27, fat: 0, benefits: ['Potassium', 'Energy'], healthTip: 'Perfect pre-workout snack.' },
+      { id: 's5', name: 'Samosa (1 pc)', calories: 252, protein: 4, carbs: 32, fat: 12, benefits: ['Crispy', 'Traditional'], healthTip: 'High in calories, enjoy occasionally.' },
+      { id: 's6', name: 'Boiled Corn (1 cup)', calories: 180, protein: 5, carbs: 38, fat: 2, benefits: ['Fiber', 'Vitamins'], healthTip: 'Healthy street food option.' },
+      { id: 's7', name: 'Sprouts (1 cup)', calories: 120, protein: 8, carbs: 20, fat: 1, benefits: ['Protein', 'Fiber'], healthTip: 'Superfood snack.' },
+      { id: 's8', name: 'Protein Bar', calories: 220, protein: 15, carbs: 25, fat: 8, benefits: ['Convenient', 'Protein'], healthTip: 'Check sugar content.' },
+      { id: 's9', name: 'Popcorn (2 cups)', calories: 120, protein: 4, carbs: 24, fat: 3, benefits: ['Fiber', 'Low cal'], healthTip: 'Air-popped is best.' },
+      { id: 's10', name: 'Milk (1 glass)', calories: 150, protein: 8, carbs: 12, fat: 8, benefits: ['Calcium', 'Protein'], healthTip: 'Choose low-fat for fewer calories.' },
+      { id: 's11', name: 'Tea (1 cup)', calories: 30, protein: 1, carbs: 4, fat: 1, benefits: ['Antioxidants', 'Refreshing'], healthTip: 'Limit sugar.' },
+      { id: 's12', name: 'Coffee (Black)', calories: 2, protein: 0, carbs: 0, fat: 0, benefits: ['Energy', 'Metabolism'], healthTip: 'Avoid excess sugar/cream.' },
+      { id: 's13', name: 'Orange Juice (1 glass)', calories: 120, protein: 2, carbs: 28, fat: 0, benefits: ['Vitamin C', 'Refreshing'], healthTip: 'Fresh is better than packaged.' },
+      { id: 's14', name: 'Protein Shake', calories: 180, protein: 25, carbs: 10, fat: 3, benefits: ['Muscle recovery', 'Convenient'], healthTip: 'Great post-workout.' },
+      { id: 's15', name: 'Dark Chocolate (2 pcs)', calories: 110, protein: 1, carbs: 12, fat: 7, benefits: ['Antioxidants', 'Mood'], healthTip: 'Moderation is key.' },
+      { id: 's16', name: 'Greek Yogurt Cup', calories: 140, protein: 15, carbs: 10, fat: 4, benefits: ['Probiotics', 'Protein'], healthTip: 'Choose plain to avoid sugar.' },
+      { id: 's17', name: 'Biscuits (2 pcs)', calories: 120, protein: 2, carbs: 18, fat: 5, benefits: ['Quick snack', 'Portable'], healthTip: 'Check for trans fats.' },
+      { id: 's18', name: 'Carrot Sticks (1 cup)', calories: 50, protein: 1, carbs: 12, fat: 0, benefits: ['Low cal', 'Beta-carotene'], healthTip: 'Perfect guilt-free snack.' },
+      { id: 's19', name: 'Roasted Chickpeas', calories: 140, protein: 7, carbs: 22, fat: 2, benefits: ['Protein', 'Fiber'], healthTip: 'Crunchy healthy snack.' },
+      { id: 's20', name: 'Smoothie (Mixed Fruit)', calories: 200, protein: 4, carbs: 45, fat: 2, benefits: ['Vitamins', 'Refreshing'], healthTip: 'Use whole fruits, not juice.' },
+    ]
+  };
+  return (items[category.key] || []).map(item => ({
+    ...item,
+    category: category.key,
+    categoryLabel: category.label,
+    accent: category.accent,
+    icon: FOOD_ICON_MAP[item.name] || MdOutlineFoodBank,
+  }));
+};
+
+// Build the complete food database
+const FOOD_RECOMMENDATIONS = FOOD_CATEGORY_CONFIG.reduce((acc, category) => {
+  acc[category.key] = buildFoodItems(category);
+  return acc;
+}, {});
+
+// =================================================================
+// === ⬇️ PROFESSIONAL MEAL SUMMARY CARD ⬇️ ===
+// =================================================================
+const MealSummaryCard = ({ icon: IconComponent, title, calories, accent }) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5 }}
     style={{
-      background: `rgba(${color.r}, ${color.g}, ${color.b}, 0.1)`,
-      backdropFilter: "blur(15px)",
-      borderRadius: "20px",
-      padding: "20px",
-      border: `1px solid rgba(${color.r}, ${color.g}, ${color.b}, 0.25)`,
-      boxShadow: `0 8px 30px rgba(${color.r}, ${color.g}, ${color.b}, 0.15)`,
+      background: designTheme.cardBg,
+      border: `2px solid ${accent}`,
+      borderRadius: "18px",
+      boxShadow: designTheme.shadow,
       textAlign: "center",
       display: "flex",
       flexDirection: "column",
+      alignItems: "center",
       justifyContent: "center",
       gap: "8px",
+      padding: "20px 0 16px 0",
+      minHeight: 120,
     }}
   >
-    <div style={{ fontSize: "2.5rem" }}>{icon}</div>
-    <div style={{ fontSize: "1rem", fontWeight: "600", color: "#e2e8f0" }}>
-      {title}
+    <div style={{ color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <IconComponent size={40} />
     </div>
-    <div
-      style={{
-        fontSize: "1.8rem",
-        fontWeight: "800",
-        color: `rgb(${color.r}, ${color.g}, ${color.b})`,
-      }}
-    >
+    <div style={{ fontSize: "1rem", fontWeight: 600, color: designTheme.textSecondary }}>{title}</div>
+    <div style={{ fontSize: "1.7rem", fontWeight: 800, color: accent }}>
       {calories}
-      <span style={{ fontSize: "1rem", color: "#94a3b8", marginLeft: "4px" }}>
-        kcal
-      </span>
+      <span style={{ fontSize: "1rem", color: designTheme.textSecondary, marginLeft: 4 }}>kcal</span>
     </div>
   </motion.div>
 );
-// =================================================================
-// === ⬆️ NEW MEAL SUMMARY COMPONENT (ADD-ON) ⬆️ ===
-// =================================================================
 
-const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
-  const [caloriesConsumed, setCaloriesConsumed] = useState(0);
-  const [dailyGoal, setDailyGoal] = useState(2000);
+// =================================================================
+// === ⬇️ MAIN CALORIE TRACKER COMPONENT ⬇️ ===
+// =================================================================
+function CalorieTracker({ user, addXP, userStats, setUserStats }) {
+  // === State Variables ===
+  const [loading, setLoading] = useState(false); // Mock loading state
+  const [todayMealLog, setTodayMealLog] = useState([]); // Holds logged meals
+  
+  // Stats state (derived from userStats prop or local state)
+  const [dailyGoal, setDailyGoal] = useState(userStats?.dailyGoal || 2000);
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success"); // 'success', 'warning', 'error'
+  
+  // Food Recommendation state
+  const [activeFoodCategory, setActiveFoodCategory] = useState("breakfast");
+  const [foodSearch, setFoodSearch] = useState("");
+  
+  // Modal states
   const [showAddMealModal, setShowAddMealModal] = useState(false);
+  const [showFoodModal, setShowFoodModal] = useState(false);
+  const [selectedFood, setSelectedFood] = useState(null);
+  
+  // Add Custom Meal form state
   const [mealName, setMealName] = useState("");
   const [mealCalories, setMealCalories] = useState("");
   const [mealCategory, setMealCategory] = useState("breakfast");
+  
+  // Other UI state
   const [confirmReset, setConfirmReset] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
-  const [loading, setLoading] = useState(true);
-  const [meals, setMeals] = useState([]); // This can be used for historical data
-  const [todayMealLog, setTodayMealLog] = useState([]); // SINGLE SOURCE OF TRUTH for today
-
-  // New Food Recommendation States
-  const [activeFoodCategory, setActiveFoodCategory] = useState("breakfast"); // NOW set to 'breakfast'
-  const [foodSearch, setFoodSearch] = useState("");
-  const [showFoodModal, setShowFoodModal] = useState(false);
-  const [selectedFood, setSelectedFood] = useState(null);
-
   const mealLogRef = useRef(null);
-  const API_URL = "http://localhost:5000/api";
 
-  const makeAuthenticatedRequest = async (url, data = null, method = "GET") => {
-    try {
-      const config = {
-        method,
-        url: `${API_URL}${url}`,
-        headers: { userid: user?.id || "demo-user" },
-      };
-      if (data) config.data = data;
-      const response = await axios(config);
-      return response;
-    } catch (error) {
-      console.error(`API request failed: ${method} ${url}`, error.message);
-      throw error;
-    }
+  // === Toast Notification Helper ===
+  const showAppToast = (message, type = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
   };
 
-  // =================================================================
-  // === ⬇️ DATA LOADING LOGIC (UNCHANGED) ⬇️ ===
-  // =================================================================
-  useEffect(() => {
-    loadFromLocalStorage();
-    if (user?.id) {
-      syncWithBackend();
-    } else {
-      setLoading(false);
-    }
-  }, [user?.id]);
+  // === Core Logic & Calculations ===
 
-  const syncWithBackend = async () => {
-    setLoading(true);
-    try {
-      const response = await makeAuthenticatedRequest("/calories/today");
-      const data = response.data;
-      setCaloriesConsumed(data.totalCalories || 0);
-      setDailyGoal(data.dailyGoal || 2000);
-      setMeals(data.meals || []); // This is the historical log from backend
-      // We don't load todayMealLog from here, preserving the local one
-    } catch (error) {
-      console.error("Error loading calorie data from backend:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadFromLocalStorage = () => {
-    try {
-      const savedCalories = localStorage.getItem("caloriesConsumed");
-      const savedGoal = localStorage.getItem("dailyCalorieGoal");
-      const savedMeals = localStorage.getItem("calorieMeals"); // Historical
-      const savedMealLog = localStorage.getItem("todayMealLog"); // Today's log
-
-      setCaloriesConsumed(savedCalories ? parseInt(savedCalories) : 0);
-      setDailyGoal(savedGoal ? parseInt(savedGoal) : 2000);
-      setMeals(savedMeals ? JSON.parse(savedMeals) : []);
-      setTodayMealLog(savedMealLog ? JSON.parse(savedMealLog) : []);
-    } catch (error) {
-      console.error("Error loading from localStorage:", error);
-      setCaloriesConsumed(0);
-      setDailyGoal(2000);
-      setMeals([]);
-      setTodayMealLog([]);
-    }
-  };
-  // =================================================================
-  // === ⬆️ END OF DATA LOADING LOGIC ⬆️ ===
-  // =================================================================
-
-  const addMeal = async () => {
-    if (!mealName.trim() || !mealCalories || isNaN(mealCalories)) return;
-    const calories = parseInt(mealCalories);
-
-    const mealLogItem = {
-      id: `custom_${Date.now()}`,
-      name: mealName,
-      calories,
-      protein: 0, // Custom meals don't have detailed macros
-      carbs: 0,
-      fat: 0,
-      category: mealCategory, // 'breakfast', 'lunch', etc.
-      timestamp: new Date().toISOString(),
-      source: "custom_meal",
-    };
-
-    try {
-      // Try saving to backend first
-      const response = await makeAuthenticatedRequest(
-        "/calories/add-meal",
-        {
-          name: mealName,
-          calories,
-          category: mealCategory,
-        },
-        "POST"
-      );
-
-      if (response.data.success) {
-        setCaloriesConsumed(response.data.calorieEntry.totalCalories);
-        setMeals(response.data.calorieEntry.meals); // Update historical
-        setTodayMealLog((prev) => [...prev, mealLogItem]); // Update today's log
-        localStorage.setItem(
-          "todayMealLog",
-          JSON.stringify([...todayMealLog, mealLogItem])
-        );
-
-        setToastMessage("Meal Added! +5 XP!");
-        setToastType("success");
-      }
-    } catch (error) {
-      // Fallback to localStorage for offline mode
-      console.error("Error adding meal to backend, saving locally:", error);
-      const newCalories = caloriesConsumed + calories;
-      setCaloriesConsumed(newCalories);
-      setTodayMealLog((prev) => [...prev, mealLogItem]);
-
-      localStorage.setItem("caloriesConsumed", newCalories.toString());
-      localStorage.setItem(
-        "todayMealLog",
-        JSON.stringify([...todayMealLog, mealLogItem])
-      );
-      // We also save to the historical 'meals' array for consistency in offline mode
-      const newMeal = { ...mealLogItem };
-      setMeals([...meals, newMeal]);
-      localStorage.setItem("calorieMeals", JSON.stringify([...meals, newMeal]));
-
-      setToastMessage("Meal added locally (Offline mode)");
-      setToastType("success");
-    } finally {
-      // This runs for both success and failure
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-      setMealName("");
-      setMealCalories("");
-      setMealCategory("breakfast");
-      setShowAddMealModal(false);
-    }
-  };
-
-  const addFoodToIntake = async (food) => {
-    try {
-      const newCalories = caloriesConsumed + food.calories;
-      setCaloriesConsumed(newCalories);
-
-      const mealLogItem = {
-        id: `food_${food.id}_${Date.now()}`,
-        name: food.name,
-        calories: food.calories,
-        protein: food.protein,
-        carbs: food.carbs,
-        fat: food.fat,
-        category: food.category, // This now correctly uses the food's category
-        timestamp: new Date().toISOString(),
-        source: "food_recommendation",
-      };
-
-      // Add to today's log
-      setTodayMealLog((prev) => [...prev, mealLogItem]);
-      localStorage.setItem(
-        "todayMealLog",
-        JSON.stringify([...todayMealLog, mealLogItem])
-      );
-      localStorage.setItem("caloriesConsumed", newCalories.toString());
-
-      // Also add to historical 'meals' for local consistency
-      const newMeal = {
-        id: mealLogItem.id,
-        name: food.name,
-        calories: food.calories,
-        category: food.category,
-        timestamp: mealLogItem.timestamp,
-      };
-      setMeals([...meals, newMeal]);
-      localStorage.setItem("calorieMeals", JSON.stringify([...meals, newMeal]));
-
-      // Show toast
-      if (newCalories >= dailyGoal) {
-        setToastMessage("Goal reached! Keep it up! 💪🔥");
-        setToastType("success");
-      } else {
-        setToastMessage(`Added ${food.name}! +5 XP!`);
-        setToastType("success");
-      }
-
-      // Add XP & Save to Supabase (backend tasks)
-      if (addXP) addXP(`food_${food.id}`, 5);
-      if (user?.id) {
-        await saveFoodLogToSupabase(food);
-        // ... (rest of your Supabase user stats/leaderboard logic) ...
-      }
-    } catch (error) {
-      console.error("Error adding food:", error);
-      setToastMessage("Error adding food. Saved locally.");
-      setToastType("error");
-    } finally {
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-      setShowFoodModal(false);
-      setSelectedFood(null);
-    }
-  };
-
-  // ... (handleViewLog, handleReset, updateGoal functions are unchanged) ...
-  const handleViewLog = () => {
-    if (mealLogRef.current) {
-      mealLogRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  const handleReset = async () => {
-    if (!confirmReset) {
-      setConfirmReset(true);
-      setTimeout(() => setConfirmReset(false), 2000);
-    } else {
-      try {
-        await makeAuthenticatedRequest("/calories/reset", {}, "POST");
-      } catch (error) {
-        console.error("Error resetting calories on backend:", error);
-      } finally {
-        // Always clear locally
-        setCaloriesConsumed(0);
-        setMeals([]);
-        setTodayMealLog([]);
-        localStorage.removeItem("caloriesConsumed");
-        localStorage.removeItem("calorieMeals");
-        localStorage.removeItem("todayMealLog");
-        setConfirmReset(false);
-      }
-    }
-  };
-
-  const updateGoal = async (newGoal) => {
-    if (newGoal > 0) {
-      try {
-        await makeAuthenticatedRequest(
-          "/calories/goal",
-          { dailyGoal: newGoal },
-          "PUT"
-        );
-      } catch (error) {
-        console.error("Error updating calorie goal on backend:", error);
-      } finally {
-        // Always update locally
-        setDailyGoal(newGoal);
-        localStorage.setItem("dailyCalorieGoal", newGoal.toString());
-      }
-    }
-  };
-
-  // ... (Supabase functions are unchanged) ...
-  const saveFoodLogToSupabase = async (food) => {
-    try {
-      if (!user?.id) return;
-      const { error } = await supabase.from("food_logs").insert({
-        user_id: user.id,
-        food_name: food.name,
-        calories: food.calories,
-        protein: food.protein,
-        carbs: food.carbs,
-        fat: food.fat,
-        category: food.category, // Use the food's meal category
-        benefits: food.benefits,
-        logged_at: new Date().toISOString(),
-        date: new Date().toISOString().split("T")[0],
-      });
-      if (error) console.error("Error saving food log to Supabase:", error);
-    } catch (error) {
-      console.error("Error in saveFoodLogToSupabase:", error);
-    }
-  };
-
-  const updateUserLevelInSupabase = async (newXp, newLevel) => {
-    // ... (this function is unchanged)
-  };
-
-  // =================================================================
-  // === ⬇️ REFACSORED FOOD DATABASE (MEAL-BASED) ⬇️ ===
-  // =================================================================
-
-  const FOOD_CATEGORY_CONFIG = [
-    {
-      key: "breakfast",
-      label: "🍳 Breakfast",
-      icon: "🍳",
-      description: "Start your day with energizing choices.",
-      colors: {
-        card: "rgba(251, 191, 36, 0.16)",
-        border: "rgba(251, 191, 36, 0.35)",
-        accent: "#fbbf24",
-        accentAlt: "#f97316",
-        chip: "rgba(251, 191, 36, 0.12)",
-        shadow: "rgba(251, 191, 36, 0.45)",
-        rgb: { r: 251, g: 191, b: 36 },
-      },
-      exampleFoods: [
-        "Idli (2 pcs)",
-        "Dosa (1 pc)",
-        "Poha (1 cup)",
-        "Upma (1 cup)",
-        "Paratha (1 pc)",
-        "Oats (1 cup)",
-        "Boiled Egg (2)",
-        "Omelet (2 eggs)",
-        "Toast with Butter (2 pcs)",
-        "Cereal (1 cup)",
-        "Yogurt Bowl (1 cup)",
-        "Smoothie (1 glass)",
-      ],
-    },
-    {
-      key: "lunch",
-      label: "🍛 Lunch",
-      icon: "🍛",
-      description: "Balanced meals to fuel your afternoon.",
-      colors: {
-        card: "rgba(239, 68, 68, 0.16)",
-        border: "rgba(239, 68, 68, 0.35)",
-        accent: "#ef4444",
-        accentAlt: "#f97316",
-        chip: "rgba(239, 68, 68, 0.12)",
-        shadow: "rgba(239, 68, 68, 0.45)",
-        rgb: { r: 239, g: 68, b: 68 },
-      },
-      exampleFoods: [
-        "Rice (1 cup)",
-        "Dal (1 cup)",
-        "Sambar (1 cup)",
-        "Chapati (2 pcs)",
-        "Paneer Curry (1 cup)",
-        "Chicken Curry (1 cup)",
-        "Fish Curry (1 cup)",
-        "Biryani (1 plate)",
-        "Curd Rice (1 cup)",
-        "Salad (1 bowl)",
-        "Sandwich (1)",
-        "Wrap (1)",
-      ],
-    },
-    {
-      key: "dinner",
-      label: "🍲 Dinner",
-      icon: "🍲",
-      description: "Nourishing dishes to end the day.",
-      colors: {
-        card: "rgba(59, 130, 246, 0.16)",
-        border: "rgba(59, 130, 246, 0.35)",
-        accent: "#3b82f6",
-        accentAlt: "#2563eb",
-        chip: "rgba(59, 130, 246, 0.12)",
-        shadow: "rgba(59, 130, 246, 0.45)",
-        rgb: { r: 59, g: 130, b: 246 },
-      },
-      exampleFoods: [
-        "Roti (2 pcs)",
-        "Sabzi (1 cup)",
-        "Khichdi (1 plate)",
-        "Pulao (1 plate)",
-        "Dal Makhani (1 cup)",
-        "Grilled Chicken (100g)",
-        "Grilled Salmon (100g)",
-        "Tofu Stir Fry (1 cup)",
-        "Soup (1 bowl)",
-        "Mashed Potatoes (1 cup)",
-      ],
-    },
-    {
-      key: "snacks_drinks",
-      label: "🍎 Snacks & Drinks",
-      icon: "🍎",
-      description: "Quick bites and hydration options.",
-      colors: {
-        card: "rgba(16, 185, 129, 0.16)",
-        border: "rgba(16, 185, 129, 0.35)",
-        accent: "#10b981",
-        accentAlt: "#059669",
-        chip: "rgba(16, 185, 129, 0.12)",
-        shadow: "rgba(16, 185, 129, 0.45)",
-        rgb: { r: 16, g: 185, b: 129 },
-      },
-      exampleFoods: [
-        "Samosa (1 pc)",
-        "Apple (1)",
-        "Banana (1)",
-        "Nuts (30g)",
-        "Biscuits (2 pcs)",
-        "Boiled Corn (1 cup)",
-        "Sprouts (1 cup)",
-        "Protein Bar (1)",
-        "Popcorn (1 cup)",
-        "Milk (1 glass)",
-        "Tea (1 cup)",
-        "Coffee (1 cup)",
-        "Juice (1 glass)",
-        "Protein Shake (1)",
-      ],
-    },
-  ];
-
-  const FALLBACK_CATEGORY_COLORS = {
-    card: "rgba(59, 130, 246, 0.16)",
-    border: "rgba(59, 130, 246, 0.35)",
-    accent: "#3b82f6",
-    accentAlt: "#2563eb",
-    chip: "rgba(59, 130, 246, 0.12)",
-    shadow: "rgba(59, 130, 246, 0.4)",
-    rgb: { r: 59, g: 130, b: 246 },
-  };
-
-  const HEALTH_TIP_ROTATION = [
-    "Tip: Add fresh salad or steamed veggies to boost fibre.",
-    "Tip: Pair with protein such as dal, curd, or lentils for satiety.",
-    "Tip: Opt for steamed, grilled, or baked versions to reduce excess oil.",
-    "Tip: Control portions using a mindful serving bowl or plate.",
-    "Tip: Stay hydrated with warm water or buttermilk to aid digestion.",
-  ];
-
-  const getCategoryConfig = (key) =>
-    FOOD_CATEGORY_CONFIG.find((category) => category.key === key);
-  const getCategoryColors = (key) =>
-    getCategoryConfig(key)?.colors || FALLBACK_CATEGORY_COLORS;
-  const getCategoryIcon = (key) => getCategoryConfig(key)?.icon || "🍽️";
-  const getCategoryDescription = (key) =>
-    getCategoryConfig(key)?.description;
-  const getCategoryLabel = (key) => getCategoryConfig(key)?.label;
-
-  const buildFoodItems = (category) =>
-    category.exampleFoods.map((dish, index) => {
-      // Basic calorie/macro estimation
-      const baseCalories = 150 + index * 15;
-      const protein = Math.max(3, Math.round((baseCalories * 0.18) / 4));
-      const carbs = Math.max(15, Math.round((baseCalories * 0.55) / 4));
-      const fat = Math.max(3, Math.round((baseCalories * 0.27) / 9));
-      const tip = HEALTH_TIP_ROTATION[index % HEALTH_TIP_ROTATION.length];
-
-      return {
-        id: `${category.key}_${index}`,
-        name: dish,
-        calories: baseCalories,
-        protein,
-        carbs,
-        fat,
-        benefits: [
-          `Approx. ${baseCalories} kcal per serving.`,
-          `A common ${category.key.replace(
-            "_",
-            " "
-          )} choice.`,
-          tip,
-        ],
-        healthTip: tip,
-        category: category.key, // 'breakfast', 'lunch', etc.
-        categoryLabel: category.label,
-        colors: category.colors,
-        icon: category.icon,
-      };
-    });
-
-  const FOOD_RECOMMENDATIONS = FOOD_CATEGORY_CONFIG.reduce((acc, category) => {
-    acc[category.key] = buildFoodItems(category);
-    return acc;
-  }, {});
-
-  const activeCategoryConfig =
-    getCategoryConfig(activeFoodCategory) || FOOD_CATEGORY_CONFIG[0];
-  const activeCategoryColors = getCategoryColors(activeCategoryConfig?.key);
-  const activeCategoryIcon = activeCategoryConfig?.icon || "🍽️";
-  const activeCategoryDescription =
-    getCategoryDescription(activeCategoryConfig?.key) ||
-    "Discover balanced plates to support your daily goals.";
-
-  // Filter foods based on search and category
-  const getFilteredFoods = () => {
-    const foods = FOOD_RECOMMENDATIONS[activeFoodCategory] || [];
-    if (!foodSearch.trim()) return foods;
-    return foods.filter(
-      (food) =>
-        food.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
-        food.benefits.some((benefit) =>
-          benefit.toLowerCase().includes(foodSearch.toLowerCase())
-        )
-    );
-  };
-
-  // =================================================================
-  // === ⬆️ END OF REFACSORED FOOD DATABASE ⬆️ ===
-  // =================================================================
+  // Calculate total calories consumed from the log
+  const caloriesConsumed = todayMealLog.reduce((acc, item) => acc + item.calories, 0);
 
   // Safe calculations with defaults
   const safeDailyGoal = dailyGoal || 2000;
@@ -566,9 +323,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
       : 0;
   const isOverGoal = safeDailyGoal > 0 && safeCaloriesConsumed > safeDailyGoal;
 
-  // =================================================================
-  // === ⬇️ NEW MEAL TOTALS CALCULATION (ADD-ON) ⬇️ ===
-  // =================================================================
+  // Calculate totals for each meal category
   const getMealTotals = () => {
     return todayMealLog.reduce(
       (acc, item) => {
@@ -588,25 +343,156 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
       { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 }
     );
   };
-
   const mealTotals = getMealTotals();
+  
+  // === Event Handlers ===
+
+  /**
+   * Adds a food item from the recommendations list to the log.
+   */
+  const addFoodToIntake = (food) => {
+    const mealLogItem = {
+      ...food,
+      id: `food_${Date.now()}`, // Unique ID for the log entry
+      timestamp: Date.now(),
+    };
+    
+    // In a real app, you'd save this to Firebase
+    // await saveMealToFirebase(user.uid, mealLogItem);
+    
+    setTodayMealLog(prevLog => [mealLogItem, ...prevLog]);
+
+    // Mock updating parent stats
+    setUserStats(prevStats => ({
+        ...prevStats,
+        totalCalories: (prevStats.totalCalories || 0) + food.calories,
+    }));
+    addXP(10); // Give XP for logging
+    
+    showAppToast(`${food.name} added!`, "success");
+    setShowFoodModal(false); // Close modal if open
+  };
+
+  /**
+   * Adds a custom meal from the modal form to the log.
+   */
+  const addCustomMeal = () => {
+    if (!mealName || !mealCalories) {
+      showAppToast("Please enter a name and calorie amount.", "warning");
+      return;
+    }
+    
+    const calories = parseInt(mealCalories);
+    if (isNaN(calories) || calories <= 0) {
+      showAppToast("Please enter valid calories.", "warning");
+      return;
+    }
+
+    const mealLogItem = {
+      id: `custom_${Date.now()}`,
+      name: mealName,
+      calories: calories,
+      protein: 0, // Custom meals don't have detailed macros
+      carbs: 0,
+      fat: 0,
+      category: mealCategory, // 'breakfast', 'lunch', etc.
+      timestamp: Date.now(),
+    };
+
+    // In a real app, you'd save this to Firebase
+    // await saveMealToFirebase(user.uid, mealLogItem);
+    
+    setTodayMealLog(prevLog => [mealLogItem, ...prevLog]);
+    
+    // Mock updating parent stats
+    setUserStats(prevStats => ({
+        ...prevStats,
+        totalCalories: (prevStats.totalCalories || 0) + calories,
+    }));
+    addXP(20); // Give XP for logging
+    
+    showAppToast("Custom meal added!", "success");
+    
+    // Reset modal
+    setShowAddMealModal(false);
+    setMealName("");
+    setMealCalories("");
+    setMealCategory("breakfast");
+  };
+
+  /**
+   * Placeholder for viewing the full log (e.g., navigating to another page).
+   */
+  const handleViewLog = () => {
+    // This could scroll down, or toggle a different view
+    mealLogRef.current?.scrollIntoView({ behavior: "smooth" });
+    showAppToast("Scrolled to meal log.", "success");
+  };
+
+  /**
+   * Resets the daily log (with confirmation).
+   */
+  const handleReset = () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      showAppToast("Click again to confirm reset.", "warning");
+      setTimeout(() => setConfirmReset(false), 3000); // Reset confirmation
+      return;
+    }
+
+    // In a real app, you'd clear this in Firebase
+    // await resetDailyLog(user.uid);
+    
+    setTodayMealLog([]);
+    // You might also reset parent stats here
+    setUserStats(prevStats => ({
+        ...prevStats,
+        // Reset relevant daily stats
+    }));
+    
+    showAppToast("Log reset!", "success");
+    setConfirmReset(false);
+  };
+  
+  // === Food Recommendation Filtering ===
+
+  const activeCategoryConfig = getCategoryConfig(activeFoodCategory);
+  const activeCategoryAccent = getCategoryAccent(activeCategoryConfig?.key);
+  const activeCategoryIcon = activeCategoryConfig?.icon || "🍽️";
+  const activeCategoryDescription =
+    getCategoryDescription(activeCategoryConfig?.key) ||
+    "Discover balanced plates to support your daily goals.";
+
+  // Filter foods based on search and category
+  const getFilteredFoods = () => {
+    const foods = FOOD_RECOMMENDATIONS[activeFoodCategory] || [];
+    if (!foodSearch.trim()) return foods;
+    return foods.filter(
+      (food) =>
+        food.name.toLowerCase().includes(foodSearch.toLowerCase()) ||
+        food.benefits.some((benefit) =>
+          benefit.toLowerCase().includes(foodSearch.toLowerCase())
+        )
+    );
+  };
 
   // =================================================================
-  // === ⬆️ NEW MEAL TOTALS CALCULATION (ADD-ON) ⬆️ ===
+  // === ⬇️ RENDER LOGIC ⬇️ ===
   // =================================================================
 
   if (loading) {
     return (
       <motion.div
-        /* ... (loading spinner unchanged) ... */
         style={{
-          width: "100%",
-          maxWidth: "1000px",
-          margin: "0 auto",
+          // Full-bleed loading container
+          width: "100vw",
+          minHeight: "40dvh",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "400px",
+          background: designTheme.background,
+          marginLeft: "calc(50% - 50vw)",
+          marginRight: "calc(50% - 50vw)",
         }}
       >
         <motion.div
@@ -630,13 +516,19 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       style={{
-        width: "100%",
-        maxWidth: "1000px",
-        margin: "0 auto",
+        // Full-bleed section that breaks out of any centered parent
+        width: "100vw",
+        minHeight: "100dvh",
         position: "relative",
+        background: designTheme.background,
+        padding: "clamp(20px, 3vw, 40px)",
+        boxSizing: "border-box",
+        // Make this section span the full viewport width even if parent is centered
+        marginLeft: "calc(50% - 50vw)",
+        marginRight: "calc(50% - 50vw)",
       }}
     >
-      {/* ... (Toast Notification unchanged) ... */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {showToast && (
           <motion.div
@@ -647,321 +539,325 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
               position: "fixed",
               top: "20px",
               right: "20px",
-              background:
-                toastType === "warning"
-                  ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                  : toastType === "error"
-                  ? "linear-gradient(135deg, #ef4444, #dc2626)"
-                  : "linear-gradient(135deg, #10b981, #059669)",
+              background: toastType === "warning"
+                ? "#fbbf24"
+                : toastType === "error"
+                ? "#ef4444"
+                : "#10b981",
               color: "#fff",
               padding: "16px 24px",
               borderRadius: "15px",
               fontWeight: "600",
-              boxShadow: `0 0 25px ${
-                toastType === "warning"
-                  ? "rgba(245, 158, 11, 0.5)"
-                  : toastType === "error"
-                  ? "rgba(239, 68, 68, 0.5)"
-                  : "rgba(16, 185, 129, 0.5)"
-              }`,
-              zIndex: 1500,
-              border: `1px solid ${
-                toastType === "warning"
-                  ? "rgba(245, 158, 11, 0.3)"
+              boxShadow: `0 0 25px ${toastType === "warning"
+                  ? "rgba(251, 191, 36, 0.3)"
                   : toastType === "error"
                   ? "rgba(239, 68, 68, 0.3)"
-                  : "rgba(16, 185, 129, 0.3)"
-              }`,
+                  : "rgba(16, 185, 129, 0.3)"}`,
+              zIndex: 1500,
+              border: "none",
             }}
           >
             {toastType === "success"
               ? "✅"
               : toastType === "warning"
               ? "⚠️"
-              : "❌"}{" "}
-            {toastMessage}
+              : "❌"} {toastMessage}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ================================================================= */}
-      {/* === ⬇️ NEW MEAL SUMMARY GRID (ADD-ON) ⬇️ === */}
-      {/* ================================================================= */}
+      {/* === Meal Summary Grid === */}
       <motion.div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "20px",
-          marginBottom: "30px",
+          background: designTheme.cardBg,
+          borderRadius: "20px",
+          padding: "clamp(20px, 3vw, 30px)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
+          border: `3px solid ${designTheme.border}`,
+          boxShadow: designTheme.shadow,
         }}
       >
-        <MealSummaryCard
-          icon="🍳"
-          title="Breakfast"
-          calories={mealTotals.breakfast}
-          color={getCategoryColors("breakfast").rgb}
-        />
-        <MealSummaryCard
-          icon="🍛"
-          title="Lunch"
-          calories={mealTotals.lunch}
-          color={getCategoryColors("lunch").rgb}
-        />
-        <MealSummaryCard
-          icon="🍲"
-          title="Dinner"
-          calories={mealTotals.dinner}
-          color={getCategoryColors("dinner").rgb}
-        />
-        <MealSummaryCard
-          icon="🍎"
-          title="Snacks"
-          calories={mealTotals.snacks}
-          color={getCategoryColors("snacks_drinks").rgb}
-        />
-      </motion.div>
-      {/* ================================================================= */}
-      {/* === ⬆️ NEW MEAL SUMMARY GRID (ADD-ON) ⬆️ === */}
-      {/* ================================================================= */}
-
-      {/* Main Card (Unchanged) */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        style={{
-          background: "rgba(255, 255, 255, 0.05)",
-          backdropFilter: "blur(20px) saturate(180%)",
-          borderRadius: "25px",
-          padding: "30px",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.1)",
-          marginBottom: "30px",
-        }}
-      >
+        <h2
+          style={{
+            fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
+            fontWeight: "700",
+            color: designTheme.text,
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          📊 Today's Meal Summary
+        </h2>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "30px",
-            alignItems: "center",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))",
+            gap: "16px",
+            width: "100%",
+            maxWidth: "clamp(360px, 90vw, 900px)",
+            margin: "0 auto",
           }}
         >
-          {/* Progress Circle (Unchanged) */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
+        <MealSummaryCard
+          icon={MdOutlineBreakfastDining}
+          title="Breakfast"
+          calories={mealTotals.breakfast}
+          accent={getCategoryAccent("breakfast")}
+        />
+        <MealSummaryCard
+          icon={MdLunchDining}
+          title="Lunch"
+          calories={mealTotals.lunch}
+          accent={getCategoryAccent("lunch")}
+        />
+        <MealSummaryCard
+          icon={MdRestaurant}
+          title="Dinner"
+          calories={mealTotals.dinner}
+          accent={getCategoryAccent("dinner")}
+        />
+        <MealSummaryCard
+          icon={FaAppleAlt}
+          title="Snacks & Drinks"
+          calories={mealTotals.snacks}
+          accent={getCategoryAccent("snacks_drinks")}
+        />
+        </div>
+      </motion.div>
+
+      {/* === Progress Ring, Stats, and Buttons === */}
+      <motion.div style={{
+          background: designTheme.cardBg,
+          borderRadius: "20px",
+          padding: "clamp(20px, 3vw, 30px)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
+          border: `3px solid ${designTheme.border}`,
+          boxShadow: designTheme.shadow,
+        }}>
+        <h2
+          style={{
+            fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
+            fontWeight: "700",
+            color: designTheme.text,
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          🎯 Progress & Actions
+        </h2>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
+          gap: '24px',
+          alignItems: 'center',
+          marginBottom: '30px',
+          width: "100%",
+          maxWidth: "clamp(360px, 95vw, 1100px)",
+          margin: "0 auto",
+      }}>
+        {/* --- Column 1: Progress Ring --- */}
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              width: "180px",
+              height: "180px",
+              position: "relative",
+              background: `conic-gradient(${
+                isOverGoal ? "#ef4444" : "#10b981"
+              } ${progressPercentage * 3.6}deg, rgba(255, 255, 255, 0.1) 0deg)`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: `0 0 30px ${
+                isOverGoal
+                  ? "rgba(239, 68, 68, 0.3)"
+                  : "rgba(16, 185, 129, 0.3)"
+              }`,
+            }}
+          >
             <div
               style={{
-                width: "180px",
-                height: "180px",
-                position: "relative",
-                background: `conic-gradient(${
-                  isOverGoal ? "#ef4444" : "#10b981"
-                } ${progressPercentage * 3.6}deg, rgba(255, 255, 255, 0.1) 0deg)`,
+                width: "140px",
+                height: "140px",
+                background: designTheme.cardBg, // Use theme
                 borderRadius: "50%",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: `0 0 30px ${
-                  isOverGoal
-                    ? "rgba(239, 68, 68, 0.3)"
-                    : "rgba(16, 185, 129, 0.3)"
-                }`,
+                color: "#fff",
               }}
             >
               <div
                 style={{
-                  width: "140px",
-                  height: "140px",
-                  background: "rgba(15, 23, 42, 0.8)",
-                  borderRadius: "50%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
+                  fontSize: "2.5rem",
+                  fontWeight: "800",
+                  color: isOverGoal ? "#ef4444" : "#10b981",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "2.5rem",
-                    fontWeight: "800",
-                    color: isOverGoal ? "#ef4444" : "#10b981",
-                  }}
-                >
-                  {Math.round(progressPercentage)}%
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                  Complete
-                </div>
+                {Math.round(progressPercentage)}%
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                Complete
               </div>
             </div>
-          </div>
-
-          {/* Stats Section (Unchanged) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                padding: "20px",
-                borderRadius: "15px",
-                textAlign: "center",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              <motion.input
-                type="number"
-                value={safeDailyGoal}
-                onChange={(e) => updateGoal(parseInt(e.target.value))}
-                whileFocus={{ scale: 1.05 }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "#f59e0b",
-                  fontSize: "1.8rem",
-                  fontWeight: "800",
-                  textAlign: "center",
-                  width: "100%",
-                }}
-              />
-              <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
-                Daily Goal
-              </div>
-            </div>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                padding: "20px",
-                borderRadius: "15px",
-                textAlign: "center",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "1.8rem",
-                  fontWeight: "800",
-                  color: isOverGoal ? "#ef4444" : "#3b82f6",
-                }}
-              >
-                {safeCaloriesConsumed}
-              </div>
-              <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
-                Consumed
-              </div>
-            </div>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                padding: "20px",
-                borderRadius: "15px",
-                textAlign: "center",
-                border: `1px solid ${
-                  caloriesRemaining < 0
-                    ? "rgba(239,68,68,0.3)"
-                    : "rgba(16,185,129,0.3)"
-                }`,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "1.8rem",
-                  fontWeight: "800",
-                  color: caloriesRemaining < 0 ? "#ef4444" : "#10b981",
-                }}
-              >
-                {caloriesRemaining > 0 ? caloriesRemaining : 0}
-              </div>
-              <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
-                Remaining
-              </div>
-            </div>
-          </div>
-
-          {/* Buttons (Unchanged) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <motion.button
-              whileHover={{
-                scale: 1.08,
-                boxShadow: "0 0 30px rgba(34,197,94,0.6)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowAddMealModal(true)}
-              style={{
-                padding: "15px 25px",
-                borderRadius: "15px",
-                border: "none",
-                background: "linear-gradient(135deg,#10b981,#059669)",
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: "1rem",
-                cursor: "pointer",
-              }}
-            >
-              ➕ Add Custom Meal
-            </motion.button>
-            <motion.button
-              whileHover={{
-                scale: 1.08,
-                boxShadow: "0 0 30px rgba(59,130,246,0.6)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleViewLog}
-              style={{
-                padding: "15px 25px",
-                borderRadius: "15px",
-                border: "none",
-                background: "linear-gradient(135deg,#3b82f6,#2563eb)",
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: "1rem",
-                cursor: "pointer",
-              }}
-            >
-              📋 View Meal Log
-            </motion.button>
-            <motion.button
-              whileHover={{
-                scale: 1.08,
-                boxShadow: "0 0 30px rgba(239,68,68,0.6)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleReset}
-              style={{
-                padding: "15px 25px",
-                borderRadius: "15px",
-                border: "none",
-                background: "linear-gradient(135deg,#ef4444,#dc2626)",
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: "1rem",
-                cursor: "pointer",
-              }}
-            >
-              {confirmReset ? "❗ Click Again to Confirm" : "🔄 Reset"}
-            </motion.button>
           </div>
         </div>
 
-        {/* Progress Bar (Unchanged) */}
-        <div style={{ marginTop: "30px" }}>
-          {/* ... (progress bar JSX unchanged) ... */}
+        {/* --- Column 2: Stats Section --- */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              padding: "20px",
+              borderRadius: "15px",
+              textAlign: "center",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: "800",
+                color: isOverGoal ? "#ef4444" : "#3b82f6",
+              }}
+            >
+              {safeCaloriesConsumed}
+            </div>
+            <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
+              Consumed
+            </div>
+          </div>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              padding: "20px",
+              borderRadius: "15px",
+              textAlign: "center",
+              border: `1px solid ${
+                caloriesRemaining <= 0
+                  ? "rgba(239,68,68,0.3)"
+                  : "rgba(16,185,129,0.3)"
+              }`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: "800",
+                color: caloriesRemaining <= 0 ? "#ef4444" : "#10b981",
+              }}
+            >
+              {caloriesRemaining > 0 ? caloriesRemaining : 0}
+            </div>
+            <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
+              Remaining
+            </div>
+          </div>
         </div>
+
+        {/* --- Column 3: Buttons --- */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <motion.button
+            whileHover={{
+              scale: 1.05, // Subtle hover
+              boxShadow: "0 0 20px rgba(16, 185, 129,0.4)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddMealModal(true)}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "15px",
+              border: "none",
+              background: "#10b981",
+              color: "#fff",
+              fontWeight: "700",
+              fontSize: "1rem",
+              cursor: "pointer",
+            }}
+          >
+            ➕ Add Custom Meal
+          </motion.button>
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 0 20px rgba(59,130,246,0.4)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleViewLog}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "15px",
+              border: "none",
+              background: "#3b82f6",
+              color: "#fff",
+              fontWeight: "700",
+              fontSize: "1rem",
+              cursor: "pointer",
+            }}
+          >
+            📋 View Meal Log
+          </motion.button>
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 0 20px rgba(239,68,68,0.4)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleReset}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "15px",
+              border: "none",
+              background: confirmReset
+                ? "#facc15" // Yellow for confirm
+                : "#ef4444",
+              color: confirmReset ? "#1e293b" : "#fff",
+              fontWeight: "700",
+              fontSize: "1rem",
+              cursor: "pointer",
+              transition: "background 0.3s"
+            }}
+          >
+            {confirmReset ? "❗ Click Again" : "🔄 Reset"}
+          </motion.button>
+        </div>
+      </div>
+      
+      {/* Progress Bar (Unchanged) */}
+      <div style={{ marginTop: "30px", marginBottom: "30px" }}>
+        <div style={{
+          height: '10px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '5px',
+          overflow: 'hidden',
+        }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercentage}%` }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            style={{
+              height: '100%',
+              background: isOverGoal ? "#ef4444" : "#10b981",
+              borderRadius: '5px',
+            }}
+          />
+        </div>
+      </div>
       </motion.div>
 
       {/* ================================================================= */}
       {/* === ⬇️ FOOD RECOMMENDATIONS (NOW MEAL-BASED) ⬇️ === */}
       {/* ================================================================= */}
       <motion.div
-        /* ... (main style unchanged) ... */
         style={{
-          background: "rgba(255, 255, 255, 0.05)",
-          backdropFilter: "blur(20px) saturate(180%)",
-          borderRadius: "25px",
-          padding: "30px",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.1)",
-          marginBottom: "30px",
+          background: designTheme.cardBg,
+          borderRadius: "20px",
+          padding: "clamp(20px, 3vw, 35px)",
+          border: `3px solid ${activeCategoryAccent}`,
+          boxShadow: "0 8px 24px rgba(139, 92, 246, 0.15)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
         }}
       >
         <div style={{ marginBottom: "25px" }}>
@@ -979,16 +875,13 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
               style={{
                 fontSize: "1.8rem",
                 fontWeight: "700",
-                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: activeCategoryAccent,
                 margin: 0,
               }}
             >
-              🥗 AI Food Recommendations
+              🥗 Food Recommendations
             </h2>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {/* Category Buttons - Now Meal-Based */}
               {FOOD_CATEGORY_CONFIG.map((category) => {
                 const isActive = activeFoodCategory === category.key;
                 return (
@@ -1001,25 +894,27 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                       padding: "8px 16px",
                       borderRadius: "20px",
                       border: isActive
-                        ? `1px solid ${category.colors.border}`
-                        : "1px solid rgba(255, 255, 255, 0.12)",
+                        ? `2px solid ${category.accent}`
+                        : `2px solid ${designTheme.border}`,
                       background: isActive
-                        ? `linear-gradient(135deg, ${category.colors.accent}, ${category.colors.accentAlt})`
-                        : category.colors.chip,
-                      color: isActive ? "#0f172a" : "#e2e8f0",
+                        ? category.accent
+                        : designTheme.cardBg,
+                      color: isActive ? "#fff" : designTheme.text,
                       fontWeight: "600",
-                      fontSize: "0.85rem",
+                      fontSize: "0.95rem",
                       cursor: "pointer",
                       transition: "all 0.3s ease",
                       boxShadow: isActive
-                        ? `0 0 18px ${category.colors.shadow}`
+                        ? `0 0 12px ${category.accent}33`
                         : "none",
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
                     }}
                   >
-                    <span>{category.icon}</span>
+                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                      {React.createElement(category.icon, { size: 20 })}
+                    </span>
                     <span>{category.label}</span>
                   </motion.button>
                 );
@@ -1027,34 +922,30 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
             </div>
           </div>
 
-          {/* ... (Category info box and Search Bar are unchanged) ... */}
           <motion.div
-            key={activeFoodCategory} // Re-renders on category change
-            /* ... (styles unchanged) ... */
+            key={activeFoodCategory} // This makes it re-animate on change
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             style={{
-              background: "rgba(15, 23, 42, 0.45)",
+              background: designTheme.background,
               borderRadius: "18px",
               padding: "18px",
-              border: `1px solid ${activeCategoryColors.border}`,
-              boxShadow: `0 12px 30px ${activeCategoryColors.shadow}`,
+              border: `2px solid ${activeCategoryAccent}`,
+              boxShadow: designTheme.shadow,
               marginBottom: "24px",
             }}
           >
-            {/* ... (info box content unchanged, but now uses new config) ... */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: designTheme.text }}>
               <span style={{ fontSize: '1.6rem' }}>{activeCategoryIcon}</span>
               <div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{getCategoryLabel(activeCategoryConfig?.key)}</div>
-                <div style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{activeCategoryDescription}</div>
+                <div style={{ fontSize: '0.9rem', color: designTheme.textSecondary }}>{activeCategoryDescription}</div>
               </div>
             </div>
           </motion.div>
 
-          <div style={{ position: 'relative', marginBottom: '20px', maxWidth: '400px' }}>
-            {/* ... (search bar unchanged) ... */}
+          <div style={{ position: 'relative', marginBottom: '20px', width: '100%' }}>
             <input
               type="text"
               placeholder={`Search in ${activeCategoryConfig.label}...`}
@@ -1064,33 +955,32 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                   width: '100%',
                   padding: '12px 16px 12px 45px',
                   borderRadius: '15px',
-                  border: '2px solid rgba(59, 130, 246, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
+                  border: `2px solid ${activeCategoryAccent}`,
+                  background: designTheme.background,
+                  color: designTheme.text,
                   fontSize: '0.9rem',
                   outline: 'none',
               }}
             />
-             <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '1.1rem' }}>
+             <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: designTheme.textSecondary, fontSize: '1.1rem' }}>
               🔍
             </div>
           </div>
 
         </div>
 
-        {/* Food Cards Grid (Unchanged, but data source is new) */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "20px",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
+            gap: "16px",
+            width: "100%",
           }}
         >
           <AnimatePresence>
             {getFilteredFoods().map((food, index) => (
               <motion.div
                 key={food.id}
-                /* ... (animation and style unchanged) ... */
                 layout
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1099,72 +989,55 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                 whileHover={{
                   scale: 1.02,
                   y: -8,
-                  boxShadow: `0 15px 40px ${food.colors.shadow}`
+                  boxShadow: `0 8px 24px ${food.accent}33`
                 }}
                 style={{
-                  background: food.colors.card,
-                  borderRadius: "20px",
-                  padding: "20px",
-                  border: `2px solid ${food.colors.border}`,
+                  background: designTheme.background,
+                  borderRadius: "16px",
+                  padding: "18px 12px 14px 12px",
+                  border: `2px solid ${food.accent}`,
                   cursor: "pointer",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
                 onClick={() => {
                   setSelectedFood(food);
                   setShowFoodModal(true);
                 }}
               >
-                {/* ... (card content is unchanged, but pulls new food data) ... */}
-                <div style={{ fontSize: "1.8rem", position: 'absolute', top: '15px', right: '15px' }}>
-                  {food.icon}
+                <div style={{ marginBottom: 6, color: food.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {React.createElement(food.icon, { size: 32 })}
                 </div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: '700', color: '#fff', margin: '0 0 8px 0' }}>
-                  {food.name}
-                </h3>
-                 <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '8px',
-                    marginBottom: '15px'
-                  }}>
-                    {/* (Macro boxes) */}
-                 </div>
-                 <div style={{
-                    background: `linear-gradient(135deg, ${food.colors.accent}, ${food.colors.accentAlt})`,
-                    padding: '10px 15px',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    marginBottom: '15px'
-                  }}>
-                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff' }}>
-                      {food.calories} cal
-                    </div>
-                 </div>
-                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <div style={{ fontWeight: 700, fontSize: "1.08rem", color: food.accent, marginBottom: 2, textAlign: 'center' }}>{food.name}</div>
+                <div style={{ color: designTheme.textSecondary, fontSize: "0.98rem" }}>{food.calories} kcal</div>
+                <div style={{ color: designTheme.textSecondary, fontSize: "0.92rem", marginBottom: 6, textAlign: 'center' }}>{food.protein}g P / {food.carbs}g C / {food.fat}g F</div>
+                <button
+                  style={{
+                    marginTop: 4,
+                    background: food.accent,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "6px 14px",
+                    fontWeight: 600,
+                    fontSize: "0.98rem",
+                    cursor: "pointer",
+                    boxShadow: `0 2px 8px ${food.accent}33`,
+                    transition: "background 0.2s",
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     addFoodToIntake(food);
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 20px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: `linear-gradient(135deg, ${food.colors.accent}, ${food.colors.accentAlt})`,
-                    color: '#fff',
-                    fontWeight: '700',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                  }}
                 >
-                  ➕ Add to Daily Intake
-                </motion.button>
+                  Add
+                </button>
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
-        {/* ... (No results message unchanged) ... */}
       </motion.div>
 
       {/* ================================================================= */}
@@ -1172,28 +1045,26 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
       {/* ================================================================= */}
       <motion.div
         ref={mealLogRef}
-        /* ... (styles unchanged) ... */
         style={{
-          background: "rgba(255, 255, 255, 0.05)",
-          borderRadius: "25px",
-          padding: "30px",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          marginBottom: "30px",
+          background: designTheme.cardBg,
+          borderRadius: "20px",
+          padding: "clamp(20px, 3vw, 35px)",
+          border: `3px solid #10b981`,
+          boxShadow: "0 8px 24px rgba(16, 185, 129, 0.15)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
         }}
       >
         <h2 style={{
-            fontSize: '1.8rem',
+            fontSize: 'clamp(1.3rem, 3vw, 1.8rem)',
             fontWeight: '700',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: '#10b981',
             margin: '0 0 20px 0',
+            textAlign: 'center',
           }}>
           📋 Today's Meal Log
         </h2>
         {todayMealLog.length === 0 ? (
           <motion.div
-            /* ... (empty state unchanged) ... */
             style={{
               textAlign: 'center',
               padding: '40px',
@@ -1208,15 +1079,15 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
           </motion.div>
         ) : (
           <>
-            {/* ... (Log summary stats unchanged) ... */}
+            {/* You can add summary stats here if needed */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '15px'
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))',
+              gap: '16px',
+              width: "100%",
             }}>
               <AnimatePresence>
                 {todayMealLog.map((item, index) => {
-                  // CLEANED LOGIC: 'item.category' is now the *only* source
                   const itemCategory = item.category;
                   const itemIcon = getCategoryIcon(itemCategory);
                   const itemColors = getCategoryColors(itemCategory);
@@ -1224,7 +1095,6 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                   return (
                     <motion.div
                       key={item.id}
-                      /* ... (animation and style unchanged) ... */
                       layout
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1236,6 +1106,7 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                         padding: '20px',
                         border: `2px solid ${itemColors.border}`,
                         position: 'relative',
+                        overflow: 'hidden', // Ensure icon doesn't overflow
                       }}
                     >
                       <div style={{
@@ -1249,23 +1120,31 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '1.2rem',
+                        color: itemColors.accent,
                         border: `2px solid ${itemColors.border}`,
                       }}>
-                        {itemIcon}
+                        {React.createElement(itemIcon, { size: 22 })}
                       </div>
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#fff', margin: '0 0 8px 0' }}>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#fff', margin: '0 0 8px 0', paddingRight: '40px' }}>
                         {item.name}
                       </h3>
                       <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px' }}>
-                        Added {new Date(item.timestamp).toLocaleTimeString()}
+                        Added {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
-                      {/* ... (macro display unchanged) ... */}
+                      
+                      {/* Macro Display */}
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', color: designTheme.textSecondary, fontSize: '0.9rem' }}>
+                        <span>P: {item.protein}g</span>
+                        <span>C: {item.carbs}g</span>
+                        <span>F: {item.fat}g</span>
+                      </div>
+                      
                       <div style={{
                         background: `linear-gradient(135deg, ${itemColors.accent}, ${itemColors.accentAlt}cc)`,
                         padding: '8px 12px',
                         borderRadius: '10px',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        display: 'inline-block', // So it doesn't stretch full width
                       }}>
                         <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#fff' }}>
                           {item.calories} cal
@@ -1280,11 +1159,14 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
         )}
       </motion.div>
 
-      {/* ... (Add Meal Modal unchanged, but category select now matches new config) ... */}
+      {/* ================================================================= */}
+      {/* === ⬇️ MODALS ⬇️ === */}
+      {/* ================================================================= */}
+      
+      {/* --- Add Custom Meal Modal --- */}
       <AnimatePresence>
         {showAddMealModal && (
           <motion.div
-            /* ... (modal overlay styles) ... */
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1301,26 +1183,74 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
             onClick={() => setShowAddMealModal(false)}
           >
             <motion.div
-              /* ... (modal content styles) ... */
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               style={{
-                background: 'rgba(30, 41, 59, 0.9)',
+                background: 'rgba(255, 255, 255, 0.98)',
                 borderRadius: '20px',
                 padding: '30px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                maxWidth: '500px',
-                width: '100%',
+                border: '2px solid #d8b4fe',
+                maxWidth: 'min(90vw, 700px)',
+                width: '90%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                boxShadow: '0 8px 32px rgba(139, 92, 246, 0.2)'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 style={{ fontSize: '1.8rem', color: '#fff', marginBottom: '25px' }}>
+              <h2 style={{ fontSize: '1.8rem', color: '#8b5cf6', marginBottom: '5px', textAlign: 'center', fontWeight: '700' }}>
                 🍽️ Add Custom Meal
               </h2>
-              {/* ... (Meal Name, Meal Calories inputs unchanged) ... */}
+              
+              {/* Meal Name */}
               <div>
-                <label style={{ color: '#cbd5e1', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
+                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
+                  Meal Name
+                </label>
+                <input
+                  type="text"
+                  value={mealName}
+                  onChange={(e) => setMealName(e.target.value)}
+                  placeholder="e.g., Homemade Sandwich"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'rgba(248, 249, 255, 0.8)',
+                    border: '2px solid #e0e7ff',
+                    borderRadius: '12px',
+                    color: '#fff',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Meal Calories */}
+              <div>
+                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
+                  Meal Calories (kcal)
+                </label>
+                <input
+                  type="number"
+                  value={mealCalories}
+                  onChange={(e) => setMealCalories(e.target.value)}
+                  placeholder="e.g., 450"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'rgba(248, 249, 255, 0.8)',
+                    border: '2px solid #e0e7ff',
+                    borderRadius: '12px',
+                    color: '#2d3748',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+              
+              {/* Category Select */}
+              <div>
+                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
                   Category
                 </label>
                 <select
@@ -1329,29 +1259,170 @@ const CalorieTracker = ({ user, addXP, userStats, setUserStats }) => {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(248, 249, 255, 0.8)',
+                    border: '2px solid #e0e7ff',
                     borderRadius: '12px',
-                    color: '#fff',
+                    color: '#2d3748',
                     outline: 'none',
                   }}
                 >
-                  {/* THESE OPTIONS ARE NOW SYNCED */}
-                  <option value="breakfast">🍳 Breakfast</option>
-                  <option value="lunch">🍛 Lunch</option>
-                  <option value="dinner">🍲 Dinner</option>
-                  <option value="snacks_drinks">🍎 Snack / Drink</option>
+                  {/* Options are now synced with the config */}
+                  {FOOD_CATEGORY_CONFIG.map(cat => (
+                    <option key={cat.key} value={cat.key}>{cat.label}</option>
+                  ))}
                 </select>
               </div>
-              {/* ... (Modal buttons unchanged) ... */}
+
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddMealModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: '2px solid #e0e7ff',
+                    background: 'rgba(248, 249, 255, 0.8)',
+                    color: '#4b5563',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05, boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)' }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={addCustomMeal}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: '#8b5cf6',
+                    color: '#fff',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+                  }}
+                >
+                  Add Meal
+                </motion.button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ... (Food Detail Modal unchanged) ... */}
+      {/* --- Food Detail Modal --- */}
+      <AnimatePresence>
+        {showFoodModal && selectedFood && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => setShowFoodModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{
+                background: `linear-gradient(160deg, ${designTheme.cardBg}, ${designTheme.background})`,
+                borderRadius: '20px',
+                padding: '30px',
+                border: `2px solid ${selectedFood.accent}`,
+                maxWidth: 'min(90vw, 700px)',
+                width: '90%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '15px',
+                boxShadow: `0 0 40px ${selectedFood.accent}33`
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: selectedFood.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+                  {React.createElement(selectedFood.icon, { size: 60 })}
+                </div>
+                <h2 style={{ fontSize: '1.8rem', color: selectedFood.accent, margin: '10px 0 5px 0' }}>
+                  {selectedFood.name}
+                </h2>
+                <div style={{ fontSize: '1.5rem', color: designTheme.text, fontWeight: '700' }}>
+                  {selectedFood.calories} kcal
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-around', background: 'rgba(139, 92, 246, 0.08)', borderRadius: '12px', padding: '15px' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', color: designTheme.textSecondary }}>Protein</div>
+                  <div style={{ fontSize: '1.1rem', color: designTheme.text, fontWeight: '600' }}>{selectedFood.protein}g</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', color: designTheme.textSecondary }}>Carbs</div>
+                  <div style={{ fontSize: '1.1rem', color: designTheme.text, fontWeight: '600' }}>{selectedFood.carbs}g</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', color: designTheme.textSecondary }}>Fat</div>
+                  <div style={{ fontSize: '1.1rem', color: designTheme.text, fontWeight: '600' }}>{selectedFood.fat}g</div>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ color: designTheme.text, margin: '10px 0 5px 0' }}>Benefits</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedFood.benefits.map(benefit => (
+                    <span key={benefit} style={{ background: 'rgba(139, 92, 246, 0.12)', color: designTheme.text, padding: '5px 10px', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                      {benefit}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ color: designTheme.text, margin: '10px 0 5px 0' }}>💡 Health Tip</h4>
+                <p style={{ color: designTheme.textSecondary, margin: 0, fontSize: '0.95rem' }}>
+                  {selectedFood.healthTip}
+                </p>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => addFoodToIntake(selectedFood)}
+                style={{
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: selectedFood.accent,
+                  color: '#fff',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  marginTop: '15px',
+                  fontSize: '1rem'
+                }}
+              >
+                Add to Log
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
-};
+}
 
 export default CalorieTracker;
