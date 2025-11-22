@@ -24,23 +24,38 @@ import {
 // === ⬇️ DESIGN & DATA CONFIGURATION ⬇️ ===
 // =================================================================
 
-// Centralized design theme - Updated to match lavender/white theme
+// Minimal white and purple theme
 const designTheme = {
-  background: "linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)", // Soft lavender gradient
-  cardBg: "rgba(255, 255, 255, 0.95)",     // White with slight transparency
-  text: "#2d3748",         // Dark grey for readability
-  textSecondary: "#718096", // Medium grey
-  border: "#d8b4fe",      // Light lavender border
-  shadow: "0 4px 12px rgba(139, 92, 246, 0.1)", // Soft purple shadow
-  accent: "#8b5cf6", // Lavender accent
+  background: "#ffffff", // Pure white
+  cardBg: "rgba(255, 255, 255, 1)", // White
+  text: "#1a202c", // Dark text
+  textSecondary: "#718096", // Grey text
+  border: "rgba(139, 127, 199, 0.2)", // Light purple border
+  shadow: "0 2px 8px rgba(0, 0, 0, 0.04)", // Subtle shadow
+  accent: "#8B7FC7", // Purple accent
+  accentLight: "rgba(139, 127, 199, 0.1)", // Light purple background
+  accentHover: "#9d8fd9", // Lighter purple for hover
+};
+
+// LocalStorage keys
+const STORAGE_KEYS = {
+  MEAL_LOG: 'calorieTracker_mealLog',
+  DAILY_GOAL: 'calorieTracker_dailyGoal',
+  LAST_RESET_DATE: 'calorieTracker_lastResetDate'
+};
+
+// Helper to get today's date key
+const getTodayDateKey = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 };
 
 // Centralized configuration for all food categories
 const FOOD_CATEGORY_CONFIG = [
-  { key: "breakfast", label: "Breakfast", icon: MdOutlineBreakfastDining, accent: "#f59e0b", description: "Start your day with a balanced meal." },
-  { key: "lunch", label: "Lunch", icon: MdLunchDining, accent: "#10b981", description: "Refuel for the afternoon." },
-  { key: "dinner", label: "Dinner", icon: MdRestaurant, accent: "#3b82f6", description: "Wind down with a nourishing dinner." },
-  { key: "snacks_drinks", label: "Snacks & Drinks", icon: FaAppleAlt, accent: "#ef4444", description: "Healthy snacks and hydration." },
+  { key: "breakfast", label: "Breakfast", icon: MdOutlineBreakfastDining, accent: "#8B7FC7", description: "Start your day with a balanced meal." },
+  { key: "lunch", label: "Lunch", icon: MdLunchDining, accent: "#9d8fd9", description: "Refuel for the afternoon." },
+  { key: "dinner", label: "Dinner", icon: MdRestaurant, accent: "#7a6eb5", description: "Wind down with a nourishing dinner." },
+  { key: "snacks_drinks", label: "Snacks & Drinks", icon: FaAppleAlt, accent: "#a99ee0", description: "Healthy snacks and hydration." },
 ];
 
 // Helper functions to get data from the config
@@ -269,11 +284,42 @@ const MealSummaryCard = ({ icon: IconComponent, title, calories, accent }) => (
 // =================================================================
 function CalorieTracker({ user, addXP, userStats, setUserStats }) {
   // === State Variables ===
-  const [loading, setLoading] = useState(false); // Mock loading state
-  const [todayMealLog, setTodayMealLog] = useState([]); // Holds logged meals
+  // Initialize with data from localStorage to prevent flashing
+  const [todayMealLog, setTodayMealLog] = useState(() => {
+    try {
+      const lastResetDate = localStorage.getItem(STORAGE_KEYS.LAST_RESET_DATE);
+      const today = getTodayDateKey();
+      
+      if (lastResetDate !== today) {
+        // New day - reset meal log
+        localStorage.setItem(STORAGE_KEYS.LAST_RESET_DATE, today);
+        localStorage.setItem(STORAGE_KEYS.MEAL_LOG, JSON.stringify([]));
+        return [];
+      } else {
+        // Same day - load existing data
+        const savedMealLog = localStorage.getItem(STORAGE_KEYS.MEAL_LOG);
+        if (savedMealLog) {
+          return JSON.parse(savedMealLog);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading meal log:', error);
+    }
+    return [];
+  });
   
   // Stats state (derived from userStats prop or local state)
-  const [dailyGoal, setDailyGoal] = useState(userStats?.dailyGoal || 2000);
+  const [dailyGoal, setDailyGoal] = useState(() => {
+    try {
+      const savedGoal = localStorage.getItem(STORAGE_KEYS.DAILY_GOAL);
+      if (savedGoal) {
+        return parseInt(savedGoal);
+      }
+    } catch (error) {
+      console.error('Error loading daily goal:', error);
+    }
+    return userStats?.dailyGoal || 2000;
+  });
   
   // Toast notification state
   const [showToast, setShowToast] = useState(false);
@@ -297,6 +343,22 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
   // Other UI state
   const [confirmReset, setConfirmReset] = useState(false);
   const mealLogRef = useRef(null);
+
+  // === Data Persistence ===
+  // Note: Initial data is loaded synchronously in useState initializers above
+  // to prevent the progress ring from flashing to 0% on component mount
+  
+  // Save meal log whenever it changes
+  useEffect(() => {
+    if (todayMealLog.length > 0 || localStorage.getItem(STORAGE_KEYS.MEAL_LOG)) {
+      localStorage.setItem(STORAGE_KEYS.MEAL_LOG, JSON.stringify(todayMealLog));
+    }
+  }, [todayMealLog]);
+  
+  // Save daily goal whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.DAILY_GOAL, dailyGoal.toString());
+  }, [dailyGoal]);
 
   // === Toast Notification Helper ===
   const showAppToast = (message, type = "success") => {
@@ -480,52 +542,20 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
   // === ⬇️ RENDER LOGIC ⬇️ ===
   // =================================================================
 
-  if (loading) {
-    return (
-      <motion.div
-        style={{
-          // Full-bleed loading container
-          width: "100vw",
-          minHeight: "40dvh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          background: designTheme.background,
-          marginLeft: "calc(50% - 50vw)",
-          marginRight: "calc(50% - 50vw)",
-        }}
-      >
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          style={{
-            width: "50px",
-            height: "50px",
-            border: "4px solid rgba(255, 255, 255, 0.1)",
-            borderTop: "4px solid #10b981",
-            borderRadius: "50%",
-          }}
-        />
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       style={{
-        // Full-bleed section that breaks out of any centered parent
-        width: "100vw",
+        width: "100%",
+        maxWidth: "1200px",
         minHeight: "100dvh",
         position: "relative",
         background: designTheme.background,
         padding: "clamp(20px, 3vw, 40px)",
         boxSizing: "border-box",
-        // Make this section span the full viewport width even if parent is centered
-        marginLeft: "calc(50% - 50vw)",
-        marginRight: "calc(50% - 50vw)",
+        margin: "0 auto",
       }}
     >
       {/* Toast Notification */}
@@ -540,19 +570,15 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
               top: "20px",
               right: "20px",
               background: toastType === "warning"
-                ? "#fbbf24"
+                ? "#9d8fd9"
                 : toastType === "error"
-                ? "#ef4444"
-                : "#10b981",
+                ? "#8B7FC7"
+                : "#8B7FC7",
               color: "#fff",
-              padding: "16px 24px",
-              borderRadius: "15px",
+              padding: "12px 20px",
+              borderRadius: "10px",
               fontWeight: "600",
-              boxShadow: `0 0 25px ${toastType === "warning"
-                  ? "rgba(251, 191, 36, 0.3)"
-                  : toastType === "error"
-                  ? "rgba(239, 68, 68, 0.3)"
-                  : "rgba(16, 185, 129, 0.3)"}`,
+              boxShadow: "0 4px 12px rgba(139, 127, 199, 0.2)",
               zIndex: 1500,
               border: "none",
             }}
@@ -570,32 +596,30 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
       <motion.div
         style={{
           background: designTheme.cardBg,
-          borderRadius: "20px",
-          padding: "clamp(20px, 3vw, 30px)",
-          marginBottom: "clamp(20px, 3vw, 30px)",
-          border: `3px solid ${designTheme.border}`,
+          borderRadius: "16px",
+          padding: "24px",
+          marginBottom: "20px",
+          border: `1px solid ${designTheme.border}`,
           boxShadow: designTheme.shadow,
         }}
       >
         <h2
           style={{
-            fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
-            fontWeight: "700",
+            fontSize: "1.25rem",
+            fontWeight: "600",
             color: designTheme.text,
             marginBottom: "20px",
-            textAlign: "center",
+            textAlign: "left",
           }}
         >
-          📊 Today's Meal Summary
+          Today's Meal Summary
         </h2>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
             gap: "16px",
             width: "100%",
-            maxWidth: "clamp(360px, 90vw, 900px)",
-            margin: "0 auto",
           }}
         >
         <MealSummaryCard
@@ -628,32 +652,30 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
       {/* === Progress Ring, Stats, and Buttons === */}
       <motion.div style={{
           background: designTheme.cardBg,
-          borderRadius: "20px",
-          padding: "clamp(20px, 3vw, 30px)",
-          marginBottom: "clamp(20px, 3vw, 30px)",
-          border: `3px solid ${designTheme.border}`,
+          borderRadius: "16px",
+          padding: "24px",
+          marginBottom: "20px",
+          border: `1px solid ${designTheme.border}`,
           boxShadow: designTheme.shadow,
         }}>
         <h2
           style={{
-            fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
-            fontWeight: "700",
+            fontSize: "1.25rem",
+            fontWeight: "600",
             color: designTheme.text,
             marginBottom: "20px",
-            textAlign: "center",
+            textAlign: "left",
           }}
         >
-          🎯 Progress & Actions
+          Progress & Actions
         </h2>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '24px',
           alignItems: 'center',
           marginBottom: '30px',
           width: "100%",
-          maxWidth: "clamp(360px, 95vw, 1100px)",
-          margin: "0 auto",
       }}>
         {/* --- Column 1: Progress Ring --- */}
         <div style={{ display: "flex", justifyContent: "center" }}>
@@ -663,17 +685,13 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
               height: "180px",
               position: "relative",
               background: `conic-gradient(${
-                isOverGoal ? "#ef4444" : "#10b981"
-              } ${progressPercentage * 3.6}deg, rgba(255, 255, 255, 0.1) 0deg)`,
+                isOverGoal ? "#9d8fd9" : "#8B7FC7"
+              } ${progressPercentage * 3.6}deg, rgba(139, 127, 199, 0.1) 0deg)`,
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: `0 0 30px ${
-                isOverGoal
-                  ? "rgba(239, 68, 68, 0.3)"
-                  : "rgba(16, 185, 129, 0.3)"
-              }`,
+              boxShadow: "0 4px 12px rgba(139, 127, 199, 0.15)",
             }}
           >
             <div
@@ -706,131 +724,116 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
         </div>
 
         {/* --- Column 2: Stats Section --- */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div
             style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              padding: "20px",
-              borderRadius: "15px",
+              background: "rgba(139, 127, 199, 0.05)",
+              padding: "16px",
+              borderRadius: "12px",
               textAlign: "center",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(139, 127, 199, 0.15)",
             }}
           >
             <div
               style={{
-                fontSize: "1.8rem",
-                fontWeight: "800",
-                color: isOverGoal ? "#ef4444" : "#3b82f6",
+                fontSize: "1.75rem",
+                fontWeight: "700",
+                color: "#8B7FC7",
               }}
             >
               {safeCaloriesConsumed}
             </div>
-            <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
+            <div style={{ fontSize: "0.875rem", color: "#718096", fontWeight: "500" }}>
               Consumed
             </div>
           </div>
           <div
             style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              padding: "20px",
-              borderRadius: "15px",
+              background: "rgba(139, 127, 199, 0.05)",
+              padding: "16px",
+              borderRadius: "12px",
               textAlign: "center",
-              border: `1px solid ${
-                caloriesRemaining <= 0
-                  ? "rgba(239,68,68,0.3)"
-                  : "rgba(16,185,129,0.3)"
-              }`,
+              border: "1px solid rgba(139, 127, 199, 0.15)",
             }}
           >
             <div
               style={{
-                fontSize: "1.8rem",
-                fontWeight: "800",
-                color: caloriesRemaining <= 0 ? "#ef4444" : "#10b981",
+                fontSize: "1.75rem",
+                fontWeight: "700",
+                color: caloriesRemaining <= 0 ? "#9d8fd9" : "#8B7FC7",
               }}
             >
               {caloriesRemaining > 0 ? caloriesRemaining : 0}
             </div>
-            <div style={{ fontSize: "0.9rem", color: "#64748b" }}>
+            <div style={{ fontSize: "0.875rem", color: "#718096", fontWeight: "500" }}>
               Remaining
             </div>
           </div>
         </div>
 
         {/* --- Column 3: Buttons --- */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <motion.button
-            whileHover={{
-              scale: 1.05, // Subtle hover
-              boxShadow: "0 0 20px rgba(16, 185, 129,0.4)",
-            }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowAddMealModal(true)}
             style={{
-              padding: "15px 25px",
-              borderRadius: "15px",
+              padding: "12px 20px",
+              borderRadius: "10px",
               border: "none",
-              background: "#10b981",
+              background: "#8B7FC7",
               color: "#fff",
-              fontWeight: "700",
-              fontSize: "1rem",
+              fontWeight: "600",
+              fontSize: "0.9375rem",
               cursor: "pointer",
             }}
           >
-            ➕ Add Custom Meal
+            Add Custom Meal
           </motion.button>
           <motion.button
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0 0 20px rgba(59,130,246,0.4)",
-            }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleViewLog}
             style={{
-              padding: "15px 25px",
-              borderRadius: "15px",
-              border: "none",
-              background: "#3b82f6",
-              color: "#fff",
-              fontWeight: "700",
-              fontSize: "1rem",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "1px solid #8B7FC7",
+              background: "transparent",
+              color: "#8B7FC7",
+              fontWeight: "600",
+              fontSize: "0.9375rem",
               cursor: "pointer",
             }}
           >
-            📋 View Meal Log
+            View Meal Log
           </motion.button>
           <motion.button
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0 0 20px rgba(239,68,68,0.4)",
-            }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleReset}
             style={{
-              padding: "15px 25px",
-              borderRadius: "15px",
-              border: "none",
-              background: confirmReset
-                ? "#facc15" // Yellow for confirm
-                : "#ef4444",
-              color: confirmReset ? "#1e293b" : "#fff",
-              fontWeight: "700",
-              fontSize: "1rem",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "1px solid rgba(139, 127, 199, 0.3)",
+              background: confirmReset ? "#9d8fd9" : "transparent",
+              color: confirmReset ? "#fff" : "#8B7FC7",
+              fontWeight: "600",
+              fontSize: "0.9375rem",
               cursor: "pointer",
-              transition: "background 0.3s"
+              transition: "all 0.2s"
             }}
           >
-            {confirmReset ? "❗ Click Again" : "🔄 Reset"}
+            {confirmReset ? "Click to Confirm" : "Reset Daily Log"}
           </motion.button>
         </div>
       </div>
       
       {/* Progress Bar (Unchanged) */}
-      <div style={{ marginTop: "30px", marginBottom: "30px" }}>
+      <div style={{ marginTop: "24px", marginBottom: "24px" }}>
         <div style={{
-          height: '10px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '5px',
+          height: '6px',
+          background: 'rgba(139, 127, 199, 0.1)',
+          borderRadius: '3px',
           overflow: 'hidden',
         }}>
           <motion.div
@@ -839,8 +842,8 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
             transition={{ duration: 0.5, ease: 'easeInOut' }}
             style={{
               height: '100%',
-              background: isOverGoal ? "#ef4444" : "#10b981",
-              borderRadius: '5px',
+              background: "#8B7FC7",
+              borderRadius: '3px',
             }}
           />
         </div>
@@ -873,13 +876,13 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
           >
             <h2
               style={{
-                fontSize: "1.8rem",
-                fontWeight: "700",
-                color: activeCategoryAccent,
+                fontSize: "1.25rem",
+                fontWeight: "600",
+                color: designTheme.text,
                 margin: 0,
               }}
             >
-              🥗 Food Recommendations
+              Food Recommendations
             </h2>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {FOOD_CATEGORY_CONFIG.map((category) => {
@@ -887,26 +890,23 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                 return (
                   <motion.button
                     key={category.key}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setActiveFoodCategory(category.key)}
                     style={{
-                      padding: "8px 16px",
-                      borderRadius: "20px",
+                      padding: "8px 14px",
+                      borderRadius: "10px",
                       border: isActive
-                        ? `2px solid ${category.accent}`
-                        : `2px solid ${designTheme.border}`,
+                        ? "1px solid #8B7FC7"
+                        : "1px solid rgba(139, 127, 199, 0.2)",
                       background: isActive
-                        ? category.accent
-                        : designTheme.cardBg,
-                      color: isActive ? "#fff" : designTheme.text,
+                        ? "#8B7FC7"
+                        : "transparent",
+                      color: isActive ? "#fff" : "#8B7FC7",
                       fontWeight: "600",
-                      fontSize: "0.95rem",
+                      fontSize: "0.875rem",
                       cursor: "pointer",
-                      transition: "all 0.3s ease",
-                      boxShadow: isActive
-                        ? `0 0 12px ${category.accent}33`
-                        : "none",
+                      transition: "all 0.2s ease",
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
@@ -923,24 +923,23 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
           </div>
 
           <motion.div
-            key={activeFoodCategory} // This makes it re-animate on change
+            key={activeFoodCategory}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.3 }}
             style={{
-              background: designTheme.background,
-              borderRadius: "18px",
-              padding: "18px",
-              border: `2px solid ${activeCategoryAccent}`,
-              boxShadow: designTheme.shadow,
-              marginBottom: "24px",
+              background: "rgba(139, 127, 199, 0.05)",
+              borderRadius: "12px",
+              padding: "14px",
+              border: "1px solid rgba(139, 127, 199, 0.15)",
+              marginBottom: "20px",
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: designTheme.text }}>
-              <span style={{ fontSize: '1.6rem' }}>{activeCategoryIcon}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: designTheme.text }}>
+              <span style={{ fontSize: '1.4rem', color: '#8B7FC7' }}>{activeCategoryIcon}</span>
               <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{getCategoryLabel(activeCategoryConfig?.key)}</div>
-                <div style={{ fontSize: '0.9rem', color: designTheme.textSecondary }}>{activeCategoryDescription}</div>
+                <div style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{getCategoryLabel(activeCategoryConfig?.key)}</div>
+                <div style={{ fontSize: '0.8125rem', color: designTheme.textSecondary }}>{activeCategoryDescription}</div>
               </div>
             </div>
           </motion.div>
@@ -953,16 +952,16 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
               onChange={(e) => setFoodSearch(e.target.value)}
               style={{
                   width: '100%',
-                  padding: '12px 16px 12px 45px',
-                  borderRadius: '15px',
-                  border: `2px solid ${activeCategoryAccent}`,
-                  background: designTheme.background,
+                  padding: '10px 14px 10px 38px',
+                  borderRadius: '10px',
+                  border: "1px solid rgba(139, 127, 199, 0.2)",
+                  background: "#fff",
                   color: designTheme.text,
-                  fontSize: '0.9rem',
+                  fontSize: '0.875rem',
                   outline: 'none',
               }}
             />
-             <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: designTheme.textSecondary, fontSize: '1.1rem' }}>
+             <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B7FC7', fontSize: '1rem' }}>
               🔍
             </div>
           </div>
@@ -972,7 +971,7 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             gap: "16px",
             width: "100%",
           }}
@@ -992,39 +991,39 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                   boxShadow: `0 8px 24px ${food.accent}33`
                 }}
                 style={{
-                  background: designTheme.background,
-                  borderRadius: "16px",
-                  padding: "18px 12px 14px 12px",
-                  border: `2px solid ${food.accent}`,
+                  background: "#fff",
+                  borderRadius: "12px",
+                  padding: "16px 12px",
+                  border: "1px solid rgba(139, 127, 199, 0.2)",
                   cursor: "pointer",
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 6,
+                  transition: 'all 0.2s ease',
                 }}
                 onClick={() => {
                   setSelectedFood(food);
                   setShowFoodModal(true);
                 }}
               >
-                <div style={{ marginBottom: 6, color: food.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {React.createElement(food.icon, { size: 32 })}
+                <div style={{ marginBottom: 4, color: '#8B7FC7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {React.createElement(food.icon, { size: 28 })}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "1.08rem", color: food.accent, marginBottom: 2, textAlign: 'center' }}>{food.name}</div>
-                <div style={{ color: designTheme.textSecondary, fontSize: "0.98rem" }}>{food.calories} kcal</div>
-                <div style={{ color: designTheme.textSecondary, fontSize: "0.92rem", marginBottom: 6, textAlign: 'center' }}>{food.protein}g P / {food.carbs}g C / {food.fat}g F</div>
+                <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: designTheme.text, marginBottom: 2, textAlign: 'center' }}>{food.name}</div>
+                <div style={{ color: designTheme.textSecondary, fontSize: "0.875rem", fontWeight: '600' }}>{food.calories} kcal</div>
+                <div style={{ color: designTheme.textSecondary, fontSize: "0.75rem", marginBottom: 4, textAlign: 'center' }}>{food.protein}g P / {food.carbs}g C / {food.fat}g F</div>
                 <button
                   style={{
-                    marginTop: 4,
-                    background: food.accent,
+                    marginTop: 2,
+                    background: "#8B7FC7",
                     color: "#fff",
                     border: "none",
                     borderRadius: "8px",
-                    padding: "6px 14px",
+                    padding: "6px 12px",
                     fontWeight: 600,
-                    fontSize: "0.98rem",
+                    fontSize: "0.8125rem",
                     cursor: "pointer",
-                    boxShadow: `0 2px 8px ${food.accent}33`,
                     transition: "background 0.2s",
                   }}
                   onClick={(e) => {
@@ -1047,21 +1046,21 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
         ref={mealLogRef}
         style={{
           background: designTheme.cardBg,
-          borderRadius: "20px",
-          padding: "clamp(20px, 3vw, 35px)",
-          border: `3px solid #10b981`,
-          boxShadow: "0 8px 24px rgba(16, 185, 129, 0.15)",
-          marginBottom: "clamp(20px, 3vw, 30px)",
+          borderRadius: "16px",
+          padding: "24px",
+          border: `1px solid ${designTheme.border}`,
+          boxShadow: designTheme.shadow,
+          marginBottom: "20px",
         }}
       >
         <h2 style={{
-            fontSize: 'clamp(1.3rem, 3vw, 1.8rem)',
-            fontWeight: '700',
-            color: '#10b981',
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: designTheme.text,
             margin: '0 0 20px 0',
-            textAlign: 'center',
+            textAlign: 'left',
           }}>
-          📋 Today's Meal Log
+          Today's Meal Log
         </h2>
         {todayMealLog.length === 0 ? (
           <motion.div
@@ -1187,26 +1186,26 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               style={{
-                background: 'rgba(255, 255, 255, 0.98)',
-                borderRadius: '20px',
-                padding: '30px',
-                border: '2px solid #d8b4fe',
-                maxWidth: 'min(90vw, 700px)',
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid rgba(139, 127, 199, 0.2)',
+                maxWidth: 'min(90vw, 500px)',
                 width: '90%',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '20px',
-                boxShadow: '0 8px 32px rgba(139, 92, 246, 0.2)'
+                gap: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 style={{ fontSize: '1.8rem', color: '#8b5cf6', marginBottom: '5px', textAlign: 'center', fontWeight: '700' }}>
-                🍽️ Add Custom Meal
+              <h2 style={{ fontSize: '1.25rem', color: designTheme.text, marginBottom: '4px', fontWeight: '600' }}>
+                Add Custom Meal
               </h2>
               
               {/* Meal Name */}
               <div>
-                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
+                <label style={{ color: designTheme.textSecondary, fontWeight: '500', marginBottom: '6px', display: 'block', fontSize: '0.875rem' }}>
                   Meal Name
                 </label>
                 <input
@@ -1216,20 +1215,21 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                   placeholder="e.g., Homemade Sandwich"
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(248, 249, 255, 0.8)',
-                    border: '2px solid #e0e7ff',
-                    borderRadius: '12px',
-                    color: '#fff',
+                    padding: '10px 12px',
+                    background: '#fff',
+                    border: '1px solid rgba(139, 127, 199, 0.2)',
+                    borderRadius: '8px',
+                    color: designTheme.text,
                     outline: 'none',
+                    fontSize: '0.9375rem'
                   }}
                 />
               </div>
 
               {/* Meal Calories */}
               <div>
-                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
-                  Meal Calories (kcal)
+                <label style={{ color: designTheme.textSecondary, fontWeight: '500', marginBottom: '6px', display: 'block', fontSize: '0.875rem' }}>
+                  Calories (kcal)
                 </label>
                 <input
                   type="number"
@@ -1238,19 +1238,20 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                   placeholder="e.g., 450"
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(248, 249, 255, 0.8)',
-                    border: '2px solid #e0e7ff',
-                    borderRadius: '12px',
-                    color: '#2d3748',
+                    padding: '10px 12px',
+                    background: '#fff',
+                    border: '1px solid rgba(139, 127, 199, 0.2)',
+                    borderRadius: '8px',
+                    color: designTheme.text,
                     outline: 'none',
+                    fontSize: '0.9375rem'
                   }}
                 />
               </div>
               
               {/* Category Select */}
               <div>
-                <label style={{ color: '#4b5563', fontWeight: '600', marginBottom: '5px', display: 'block' }}>
+                <label style={{ color: designTheme.textSecondary, fontWeight: '500', marginBottom: '6px', display: 'block', fontSize: '0.875rem' }}>
                   Category
                 </label>
                 <select
@@ -1258,12 +1259,14 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                   onChange={(e) => setMealCategory(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(248, 249, 255, 0.8)',
-                    border: '2px solid #e0e7ff',
-                    borderRadius: '12px',
-                    color: '#2d3748',
+                    padding: '10px 12px',
+                    background: '#fff',
+                    border: '1px solid rgba(139, 127, 199, 0.2)',
+                    borderRadius: '8px',
+                    color: designTheme.text,
                     outline: 'none',
+                    fontSize: '0.9375rem',
+                    cursor: 'pointer'
                   }}
                 >
                   {/* Options are now synced with the config */}
@@ -1274,38 +1277,39 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
               </div>
 
               {/* Modal Buttons */}
-              <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowAddMealModal(false)}
                   style={{
                     flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: '2px solid #e0e7ff',
-                    background: 'rgba(248, 249, 255, 0.8)',
-                    color: '#4b5563',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(139, 127, 199, 0.3)',
+                    background: 'transparent',
+                    color: '#8B7FC7',
                     fontWeight: '600',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '0.9375rem'
                   }}
                 >
                   Cancel
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.05, boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)' }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={addCustomMeal}
                   style={{
                     flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
+                    padding: '10px',
+                    borderRadius: '8px',
                     border: 'none',
-                    background: '#8b5cf6',
+                    background: '#8B7FC7',
                     color: '#fff',
-                    fontWeight: '700',
+                    fontWeight: '600',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+                    fontSize: '0.9375rem'
                   }}
                 >
                   Add Meal
