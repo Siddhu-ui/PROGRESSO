@@ -57,12 +57,12 @@ const TargetSetterPanel = ({ goals, onAddGoal, onToggleGoal, onDeleteGoal, getCa
           <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.9rem' }}>
             <p style={{ marginBottom: '16px' }}>No goals set yet. Start your growth journey!</p>
             <motion.button
-              style={styles.panelButton}
+              className="app-btn app-btn-primary app-btn-sm"
               onClick={onAddGoal}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
-              <FiPlus size={16} style={{ marginRight: '6px' }} /> Set Your First Goal
+              <FiPlus size={16} className="mr-1" /> Set Your First Goal
             </motion.button>
           </div>
         ) : (
@@ -182,12 +182,12 @@ const TargetSetterPanel = ({ goals, onAddGoal, onToggleGoal, onDeleteGoal, getCa
               </div>
             ))}
             <motion.button
-              style={styles.panelButton}
+              className="app-btn app-btn-primary app-btn-sm"
               onClick={onAddGoal}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
-              <FiPlus size={16} style={{ marginRight: '6px' }} /> Add New Goal
+              <FiPlus size={16} className="mr-1" /> Add New Goal
             </motion.button>
           </>
         )}
@@ -781,11 +781,8 @@ Respond like:
                 <motion.button
                   type="submit"
                   disabled={isLoading || !prompt.trim()}
-                  style={{
-                    ...styles.button,
-                    opacity: isLoading || !prompt.trim() ? 0.5 : 1,
-                    cursor: isLoading || !prompt.trim() ? 'not-allowed' : 'pointer'
-                  }}
+                  className={`app-btn app-btn-primary app-btn-sm flex items-center gap-2 ${isLoading || !prompt.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ minWidth: '84px' }}
                   whileHover={!isLoading && prompt.trim() ? { scale: 1.05 } : {}}
                   whileTap={!isLoading && prompt.trim() ? { scale: 0.95 } : {}}
                 >
@@ -797,7 +794,7 @@ Respond like:
                   ) : (
                     <>
                       <span style={styles.buttonIcon}><FiSend /></span>
-                      Ask AURA
+                      Send
                     </>
                   )}
                 </motion.button>

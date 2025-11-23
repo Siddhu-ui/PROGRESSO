@@ -1014,18 +1014,8 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
                 <div style={{ color: designTheme.textSecondary, fontSize: "0.875rem", fontWeight: '600' }}>{food.calories} kcal</div>
                 <div style={{ color: designTheme.textSecondary, fontSize: "0.75rem", marginBottom: 4, textAlign: 'center' }}>{food.protein}g P / {food.carbs}g C / {food.fat}g F</div>
                 <button
-                  style={{
-                    marginTop: 2,
-                    background: "#8B7FC7",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "6px 12px",
-                    fontWeight: 600,
-                    fontSize: "0.8125rem",
-                    cursor: "pointer",
-                    transition: "background 0.2s",
-                  }}
+                  className="app-btn app-btn-primary app-btn-sm w-full"
+                  style={{ background: '#8B7FC7' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     addFoodToIntake(food);
@@ -1044,20 +1034,20 @@ function CalorieTracker({ user, addXP, userStats, setUserStats }) {
       {/* ================================================================= */}
       <motion.div
         ref={mealLogRef}
+        className="p-4 sm:p-5 md:p-6"
         style={{
           background: designTheme.cardBg,
           borderRadius: "16px",
-          padding: "24px",
           border: `1px solid ${designTheme.border}`,
           boxShadow: designTheme.shadow,
-          marginBottom: "20px",
+          marginBottom: "16px",
         }}
       >
         <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: '1.05rem',
             fontWeight: '600',
             color: designTheme.text,
-            margin: '0 0 20px 0',
+            margin: '0 0 14px 0',
             textAlign: 'left',
           }}>
           Today's Meal Log

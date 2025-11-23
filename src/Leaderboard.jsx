@@ -153,7 +153,7 @@ const InviteFriendsCard = ({ user }) => {
         <span style={styles.inviteLinkText}>{inviteLink}</span>
         <motion.button
           onClick={handleCopy}
-          style={styles.inviteCopyButton}
+          className="app-btn app-btn-outline app-btn-sm gap-1"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -402,9 +402,10 @@ function Leaderboard({ user }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setView('friends')}
+            className={`app-btn app-btn-sm app-btn-surface gap-1 ${view === 'friends' ? 'ring-2 ring-primary/40' : ''}`}
             style={{
-              ...styles.viewToggleButton,
-              ...(view === 'friends' && styles.viewToggleButtonActive),
+              ...(view === 'friends' && { background: 'rgba(255,255,255,0.25)' }),
+              borderRadius: '10px'
             }}
           >
             <FaUsers size={14} />
@@ -427,10 +428,8 @@ function Leaderboard({ user }) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setTimeFilter(filter)}
-                  style={{
-                    ...styles.timeFilterButton,
-                    ...(timeFilter === filter && styles.timeFilterButtonActive),
-                  }}
+                  className={`app-btn app-btn-sm app-btn-outline gap-1 ${timeFilter === filter ? 'bg-primary/10 border-primary/50' : ''}`}
+                  style={{ borderRadius: '10px' }}
                 >
                   <FaCalendarAlt size={14} />
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}

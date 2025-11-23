@@ -13,17 +13,28 @@ import { getStorage } from "firebase/storage";
 // ============================================
 // FIREBASE CONFIG
 // ============================================
-// 🔑 Your Firebase configuration
-// Get these values from: Firebase Console > Project Settings > Your apps
+// 🔑 Firebase configuration
+// NOTE: Values pulled from Vite environment variables so they can differ per environment (local, Netlify, etc.).
+// Make sure to define these in Netlify (Site Settings -> Environment) prefixed with VITE_.
+// If any are missing we log a clear warning to aid debugging of auth errors like unauthorized-domain.
 const firebaseConfig = {
-  apiKey: "AIzaSyCRCBviAWfv2jVlmdm5MYEOBVhPEnVho6g",
-  authDomain: "daily-growth-tracker-6dcb2.firebaseapp.com",
-  projectId: "daily-growth-tracker-6dcb2",
-  storageBucket: "daily-growth-tracker-6dcb2.firebasestorage.app",
-  messagingSenderId: "560448305149",
-  appId: "1:560448305149:web:d21ac198dc1d0458880b94",
-  measurementId: "G-EBS0V6J8QY"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+// Basic validation to surface missing config early instead of silent runtime failures.
+const missingKeys = Object.entries(firebaseConfig)
+  .filter(([, v]) => !v)
+  .map(([k]) => k);
+if (missingKeys.length) {
+  console.warn("⚠️ Firebase config missing env vars:", missingKeys.join(", "));
+  console.warn("Add them as VITE_ vars in Netlify & your .env.local (VITE_FIREBASE_API_KEY, etc.)");
+}
 
 // ============================================
 // INITIALIZE FIREBASE SERVICES

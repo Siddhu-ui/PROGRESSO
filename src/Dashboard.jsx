@@ -200,13 +200,11 @@ const TodoListCard = ({ glassmorphicStyle, theme }) => {
           </h3>
           <motion.div 
             whileHover={{ scale: 1.05 }}
+            className="app-btn app-btn-sm"
             style={{
-              padding: '8px 16px',
-              borderRadius: '12px',
               background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
               color: theme.accent,
-              fontWeight: '700',
-              fontSize: '0.9rem'
+              fontWeight: '700'
             }}
           >
             {completedCount}/{totalCount}
@@ -220,26 +218,18 @@ const TodoListCard = ({ glassmorphicStyle, theme }) => {
           borderRadius: '20px', 
           overflow: 'hidden' 
         }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-            transition={{ duration: 0.5 }}
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="app-btn app-btn-primary app-btn-sm w-full"
             style={{
-              height: '100%',
-              background: `linear-gradient(90deg, ${theme.accent}, ${theme.primary})`,
-              borderRadius: '20px'
+              marginTop: '12px',
+              background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})`
             }}
-          />
-        </div>
-      </div>
-      
-      {/* Input Field with Enhanced Design */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        <input
-          type="text"
-          value={newTodo}
-          onChange={(e) => setNewTodo(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addTodo()}
+            onClick={addTodo}
+          >
+            Add Task
+          </motion.button>
           placeholder="✨ Add a new task..."
           style={{
             flex: 1,
